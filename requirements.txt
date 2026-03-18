@@ -1,0 +1,11 @@
+Flask
+Flask-SQLAlchemy
+Flask-Login
+requests
+scikit-learn
+numpy
+langchain
+langchain_community
+pypdf
+python-docx
+faiss-cpu
