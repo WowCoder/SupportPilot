@@ -1,14 +1,16 @@
-from flask import render_template, url_for, flash, redirect, request, jsonify
+from flask import Blueprint, render_template, url_for, flash, redirect, request, jsonify, current_app
 from flask_login import current_user, login_user, logout_user, login_required
-from app import app, db
+from app import db
 from models import User, Conversation, Message, Document
 import os
 from werkzeug.utils import secure_filename
 from rag.rag_utils import rag_utils
 from api.qwen_api import qwen_api
 
+main_bp = Blueprint('main', __name__)
+
 # Authentication routes
-@app.route('/register', methods=['GET', 'POST'])
+@main_bp.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
@@ -16,6 +18,19 @@ def register():
         username = request.form['username']
         email = request.form['email']
         password = request.form['password']
+        # Validate username
+        if len(username) < 3 or len(username) > 64:
+            flash('Username must be between 3 and 64 characters')
+            return redirect(url_for('register'))
+        # Validate email
+        if not email or '@' not in email:
+            flash('Invalid email address')
+            return redirect(url_for('register'))
+        # Validate password strength
+        is_valid, message = User.validate_password_strength(password)
+        if not is_valid:
+            flash(message)
+            return redirect(url_for('register'))
         # Check if username or email already exists
         if User.query.filter_by(username=username).first():
             flash('Username already exists')
@@ -32,7 +47,7 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html')
 
-@app.route('/login', methods=['GET', 'POST'])
+@main_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
@@ -46,13 +61,13 @@ def login():
         flash('Invalid username or password')
     return render_template('login.html')
 
-@app.route('/logout')
+@main_bp.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('login'))
 
 # Main routes
-@app.route('/')
+@main_bp.route('/')
 @login_required
 def index():
     if current_user.role == 'tech_support':
@@ -66,7 +81,7 @@ def index():
         return render_template('user_dashboard.html', conversations=conversations)
 
 # User routes
-@app.route('/conversation/new', methods=['POST'])
+@main_bp.route('/conversation/new', methods=['POST'])
 @login_required
 def create_conversation():
     if current_user.role == 'user':
@@ -76,7 +91,7 @@ def create_conversation():
         return redirect(url_for('conversation', conversation_id=conversation.id))
     return redirect(url_for('index'))
 
-@app.route('/conversation/<int:conversation_id>')
+@main_bp.route('/conversation/<int:conversation_id>')
 @login_required
 def conversation(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
@@ -86,7 +101,7 @@ def conversation(conversation_id):
     messages = conversation.messages.order_by(Message.timestamp).all()
     return render_template('conversation.html', conversation=conversation, messages=messages)
 
-@app.route('/conversation/<int:conversation_id>/send', methods=['POST'])
+@main_bp.route('/conversation/<int:conversation_id>/send', methods=['POST'])
 @login_required
 def send_message(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
@@ -133,7 +148,7 @@ def send_message(conversation_id):
     return redirect(url_for('conversation', conversation_id=conversation_id))
 
 # Tech support routes
-@app.route('/upload', methods=['GET', 'POST'])
+@main_bp.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
     if current_user.role != 'tech_support':
@@ -147,9 +162,9 @@ def upload():
         if file.filename == '':
             flash('No selected file')
             return redirect(request.url)
-        if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']:
+        if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']:
             filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             # Process document for RAG
             if rag_utils.process_document(filepath):

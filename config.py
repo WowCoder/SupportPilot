@@ -1,10 +1,14 @@
 import os
+import secrets
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key'
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///app.db'
+    SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///app.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    QWEN_API_KEY = os.environ.get('QWEN_API_KEY') or 'sk-66c0843341e041148912d387345dc9a5'
+    # API key must be set via environment variable, no fallback
+    QWEN_API_KEY = os.environ.get('QWEN_API_KEY')
+    if not QWEN_API_KEY:
+        raise ValueError("QWEN_API_KEY environment variable must be set")
     UPLOAD_FOLDER = 'uploads'
     ALLOWED_EXTENSIONS = {'txt', 'pdf', 'doc', 'docx'}
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB

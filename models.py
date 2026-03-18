@@ -4,6 +4,7 @@ from flask_login import UserMixin
 import hashlib
 import os
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -15,12 +16,27 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     role = db.Column(db.String(20), nullable=False, default='user')  # 'user' or 'tech_support'
     conversations = db.relationship('Conversation', backref='user', lazy='dynamic')
-    
+
+    @staticmethod
+    def validate_password_strength(password):
+        """Validate password strength"""
+        if len(password) < 8:
+            return False, "Password must be at least 8 characters long"
+        if len(password) > 128:
+            return False, "Password must be less than 128 characters"
+        if not any(c.isupper() for c in password):
+            return False, "Password must contain at least one uppercase letter"
+        if not any(c.islower() for c in password):
+            return False, "Password must contain at least one lowercase letter"
+        if not any(c.isdigit() for c in password):
+            return False, "Password must contain at least one number"
+        return True, "Password is strong enough"
+
     def set_password(self, password):
         salt = os.urandom(32)
         key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
         self.password_hash = salt.hex() + key.hex()
-    
+
     def check_password(self, password):
         salt = bytes.fromhex(self.password_hash[:64])
         key = bytes.fromhex(self.password_hash[64:])
