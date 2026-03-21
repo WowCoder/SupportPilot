@@ -1,7 +1,10 @@
-import os
+"""
+WSGI Entry Point for SupportPilot
+
+Usage:
+    gunicorn wsgi:app
+"""
 from app import create_app
-from app import db
-from models import User, Conversation, Message, Document
 
 app = create_app()
 

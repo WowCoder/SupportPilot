@@ -1,11 +1,9 @@
 """
-Flask extensions module
-This module defines extensions that need to be initialized with the app factory pattern
-"""
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
-from flask_wtf.csrf import CSRFProtect
+Backward compatibility layer - imports from new app package
 
-db = SQLAlchemy()
-login_manager = LoginManager()
-csrf = CSRFProtect()
+This file allows existing code to continue working during migration.
+Deprecated: Use 'from app.extensions import ...' instead.
+"""
+from app.extensions import db, login_manager, csrf
+
+__all__ = ['db', 'login_manager', 'csrf']

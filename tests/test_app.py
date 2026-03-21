@@ -3,8 +3,9 @@ Unit tests for SupportPilot application
 Run with: pytest tests/test_app.py -v
 """
 import pytest
-from app import create_app, db
-from models import User, Conversation, Message
+from app import create_app
+from app.extensions import db
+from app.models import User, Conversation, Message
 
 
 @pytest.fixture
@@ -36,13 +37,15 @@ class TestConfig:
     def test_secret_key_required(self):
         """Test that SECRET_KEY is required for production"""
         import os
+        from app.config import ProductionConfig
+
         # Save original value
         original = os.environ.get('SECRET_KEY')
         os.environ.pop('SECRET_KEY', None)
 
         try:
             with pytest.raises(ValueError):
-                create_app('production')
+                ProductionConfig()
         finally:
             # Restore original value
             if original:

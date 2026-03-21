@@ -1,17 +1,25 @@
+"""
+Qwen API Client for SupportPilot
+
+Provides interface to Alibaba Qwen LLM API for generating responses.
+"""
 import requests
 import logging
+from typing import Optional, List, Union, Dict, Any
 from flask import current_app
 
 logger = logging.getLogger(__name__)
 
 
 class QwenAPI:
+    """Client for Alibaba Qwen API"""
+
     def __init__(self):
         self.api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
         self.default_model = "qwen-turbo"
         self.timeout = 30  # Request timeout in seconds
 
-    def _get_api_key(self):
+    def _get_api_key(self) -> Optional[str]:
         """Get API key from current app config"""
         try:
             return current_app.config.get('QWEN_API_KEY')
@@ -20,13 +28,17 @@ class QwenAPI:
             import os
             return os.environ.get('QWEN_API_KEY')
 
-    def generate_response(self, query, context=None):
+    def generate_response(
+        self,
+        query: str,
+        context: Optional[Union[List[str], List[Dict[str, Any]], str]] = None
+    ) -> str:
         """
         Generate response using Alibaba Qwen API with context
 
         Args:
             query: User query
-            context: List of relevant context strings
+            context: List of relevant context strings or dict with content/similarity
 
         Returns:
             AI-generated response string
@@ -81,7 +93,7 @@ class QwenAPI:
 
             if 'choices' in result and len(result['choices']) > 0:
                 content = result['choices'][0]['message']['content']
-                logger.debug(f'Received response from Qwen API')
+                logger.debug('Received response from Qwen API')
                 return content
             else:
                 logger.warning(f'Unexpected API response format: {result}')
@@ -114,4 +126,5 @@ class QwenAPI:
             return "抱歉，发生未知错误，请稍后重试。"
 
 
+# Global instance
 qwen_api = QwenAPI()

@@ -18,33 +18,54 @@ SupportPilot 是一个基于 Flask 的智能客户支持系统，使用了 RAG (
 
 ```
 SupportPilot/
-├── api/                 # API 相关文件
-│   └── qwen_api.py      # 调用 Alibaba Qwen API
-├── instance/            # 实例目录
-│   └── app.db           # SQLite 数据库文件
-├── logs/                # 日志目录
-├── rag/                 # RAG 相关文件
+├── app/                 # 应用主包（重构后）
+│   ├── __init__.py      # 应用工厂
+│   ├── extensions.py    # Flask 扩展初始化
+│   ├── config.py        # 配置管理
+│   ├── utils.py         # 工具函数
+│   ├── models/          # 数据模型
+│   │   ├── __init__.py
+│   │   ├── user.py          # User 模型
+│   │   ├── conversation.py  # Conversation 模型
+│   │   ├── message.py       # Message 模型
+│   │   └── document.py      # Document 模型
+│   ├── auth/          # 认证蓝图
+│   │   ├── __init__.py
+│   │   └── routes.py      # 注册/登录/注销路由
+│   ├── main/          # 主路由蓝图
+│   │   ├── __init__.py
+│   │   └── routes.py      # 首页/仪表盘路由
+│   ├── conversation/  # 会话蓝图
+│   │   ├── __init__.py
+│   │   └── routes.py      # 会话管理路由
+│   ├── document/    # 文档蓝图
+│   │   ├── __init__.py
+│   │   └── routes.py      # 文档上传/删除路由
+│   └── api/         # API 蓝图
+│       ├── __init__.py
+│       └── routes.py      # REST API 端点
+├── api/                 # API 客户端（保留）
+│   └── qwen_api.py      # Alibaba Qwen API 客户端
+├── rag/                 # RAG 相关
 │   └── rag_utils.py     # RAG 功能实现
 ├── templates/           # HTML 模板
-│   ├── conversation.html     # 会话页面
-│   ├── login.html            # 登录页面
-│   ├── register.html         # 注册页面
-│   ├── tech_dashboard.html   # 技术支持仪表盘
-│   ├── upload.html           # 文件上传页面
-│   └── user_dashboard.html   # 用户仪表盘
+│   ├── conversation.html
+│   ├── login.html
+│   ├── register.html
+│   ├── tech_dashboard.html
+│   ├── upload.html
+│   └── user_dashboard.html
 ├── tests/               # 测试文件
 │   └── test_app.py      # 单元测试
-├── uploads/             # 上传文件目录
-├── app.py               # 主应用文件（应用工厂）
-├── config.py            # 配置文件
-├── models.py            # 数据模型
-├── routes.py            # 路由文件
-├── wsgi.py              # WSGI 入口（生产环境）
-├── gunicorn_config.py   # Gunicorn 配置
-├── requirements.txt     # 生产依赖
-├── requirements-dev.txt # 开发依赖
-├── .env.example         # 环境变量示例
-└── start.sh             # 启动脚本
+├── wsgi.py              # WSGI 入口
+├── app.py               # 兼容层（导入 app.create_app）
+├── config.py            # 兼容层（导入 app.config）
+├── models.py            # 兼容层（导入 app.models）
+├── utils.py             # 工具函数（根模块导出）
+├── requirements.txt
+├── requirements-dev.txt
+├── .env.example
+└── start.sh
 ```
 
 ## 核心功能
