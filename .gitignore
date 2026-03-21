@@ -29,6 +29,12 @@ __pycache__/
 
 # Log files
 *.log
+logs/
+
+# Test coverage
+htmlcov/
+.coverage
+.pytest_cache/
 
 # OS generated files
 .DS_Store
@@ -41,3 +47,7 @@ Thumbs.db
 
 # RAG pickle files
 rag/documents.pkl
+
+# Chroma database
+chroma_db/
+*.chroma

@@ -103,12 +103,13 @@
     <div class="container">
         <div class="header">
             <h1>Welcome, {{ current_user.username }}!</h1>
-            <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
+            <a href="{{ url_for('main.logout') }}" class="logout-link">Logout</a>
         </div>
         
         <h2>Your Conversations</h2>
         <div class="new-conversation">
-            <form method="POST" action="{{ url_for('create_conversation') }}">
+            <form method="POST" action="{{ url_for('main.create_conversation') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button type="submit">Start New Conversation</button>
             </form>
         </div>
@@ -116,7 +117,7 @@
         <ul class="conversation-list">
             {% for conversation in conversations %}
                 <li class="conversation-item">
-                    <a href="{{ url_for('conversation', conversation_id=conversation.id) }}">
+                    <a href="{{ url_for('main.conversation', conversation_id=conversation.id) }}">
                         <div class="conversation-info">
                             Conversation #{{ conversation.id }} - {{ conversation.created_at.strftime('%Y-%m-%d %H:%M') }}
                         </div>

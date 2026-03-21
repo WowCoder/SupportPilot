@@ -115,8 +115,8 @@
         <div class="header">
             <h1>Tech Support Dashboard</h1>
             <div class="header-links">
-                <a href="{{ url_for('upload') }}" class="header-link upload-link">Upload Documents</a>
-                <a href="{{ url_for('logout') }}" class="header-link logout-link">Logout</a>
+                <a href="{{ url_for('main.upload') }}" class="header-link upload-link">Upload Documents</a>
+                <a href="{{ url_for('main.logout') }}" class="header-link logout-link">Logout</a>
             </div>
         </div>
         
@@ -125,7 +125,7 @@
             <ul class="conversation-list">
                 {% for conversation in needs_attention %}
                     <li class="conversation-item needs-attention">
-                        <a href="{{ url_for('conversation', conversation_id=conversation.id) }}">
+                        <a href="{{ url_for('main.conversation', conversation_id=conversation.id) }}">
                             <div class="conversation-info">
                                 Conversation #{{ conversation.id }} - {{ conversation.created_at.strftime('%Y-%m-%d %H:%M') }}
                             </div>
@@ -144,7 +144,7 @@
         <ul class="conversation-list">
             {% for conversation in conversations %}
                 <li class="conversation-item {% if conversation.status == 'needs_attention' %}needs-attention{% endif %}">
-                    <a href="{{ url_for('conversation', conversation_id=conversation.id) }}">
+                    <a href="{{ url_for('main.conversation', conversation_id=conversation.id) }}">
                         <div class="conversation-info">
                             Conversation #{{ conversation.id }} - {{ conversation.created_at.strftime('%Y-%m-%d %H:%M') }}
                         </div>

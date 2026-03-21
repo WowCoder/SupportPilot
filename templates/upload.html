@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Upload Documents</title>
+    <title>Upload Documents - SupportPilot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         * {
             box-sizing: border-box;
@@ -10,166 +12,1059 @@
         }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
         }
         .container {
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 30px;
+            max-width: 900px;
+            margin: 0 auto;
             background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
         }
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            padding: 25px 30px;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
         }
-        h1 {
-            color: #2c3e50;
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
         }
         .back-link {
-            padding: 8px 16px;
-            background-color: #95a5a6;
+            padding: 10px 20px;
+            background-color: rgba(255,255,255,0.2);
             color: white;
-            border-radius: 4px;
+            border-radius: 8px;
             text-decoration: none;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
         .back-link:hover {
-            background-color: #7f8c8d;
+            background-color: rgba(255,255,255,0.3);
+            transform: translateX(-3px);
         }
+        .content {
+            padding: 30px;
+        }
+        /* Flash Messages */
         .flash-messages {
             margin-bottom: 20px;
         }
         .flash-message {
-            padding: 10px;
+            padding: 15px 20px;
             margin-bottom: 10px;
-            border-radius: 4px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .flash-success {
             background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
-        .upload-form {
-            margin-bottom: 40px;
-            padding: 20px;
-            background-color: #f9f9f9;
-            border-radius: 8px;
+        .flash-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
-        .form-group {
-            margin-bottom: 20px;
+        /* Upload Area */
+        .upload-section {
+            margin-bottom: 30px;
         }
-        label {
-            display: block;
+        .upload-section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .drop-zone {
+            border: 3px dashed #cbd5e0;
+            border-radius: 16px;
+            padding: 50px 30px;
+            text-align: center;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .drop-zone:hover {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);
+        }
+        .drop-zone.drag-over {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #e8ecff 0%, #d0d9ff 100%);
+            transform: scale(1.02);
+        }
+        .drop-zone-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .drop-zone-text {
+            font-size: 18px;
+            color: #4a5568;
             margin-bottom: 8px;
-            font-weight: 500;
-            color: #34495e;
         }
-        input[type="file"] {
+        .drop-zone-hint {
+            font-size: 14px;
+            color: #718096;
+        }
+        .drop-zone-formats {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .format-badge {
+            padding: 5px 12px;
+            background-color: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .drop-zone-input {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: white;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
         }
-        button {
-            padding: 12px 24px;
-            background-color: #3498db;
+        /* Upload Progress */
+        .upload-progress {
+            margin-top: 20px;
+            display: none;
+        }
+        .upload-progress.active {
+            display: block;
+        }
+        .progress-item {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .progress-filename {
+            font-weight: 500;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .progress-status {
+            font-size: 13px;
+            color: #718096;
+        }
+        .progress-bar {
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        .progress-bar-fill.success {
+            background: linear-gradient(90deg, #48bb78 0%, #38a169 100%);
+        }
+        .progress-bar-fill.error {
+            background: linear-gradient(90deg, #f56565 0%, #e53e3e 100%);
+        }
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        /* Settings Panel */
+        .btn-settings {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            font-weight: 500;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
-        button:hover {
-            background-color: #2980b9;
+        .btn-settings:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
-        h2 {
-            margin: 40px 0 20px;
-            color: #34495e;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ecf0f1;
+        .settings-panel {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+        }
+        .setting-item {
+            margin-bottom: 15px;
+        }
+        .setting-item:last-child {
+            margin-bottom: 0;
+        }
+        .setting-item label {
+            display: block;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .setting-item input[type="number"] {
+            width: 100%;
+            max-width: 300px;
+            padding: 10px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        .setting-item input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .setting-hint {
+            display: block;
+            font-size: 12px;
+            color: #718096;
+            margin-top: 6px;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: 150px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            color: white;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        /* Test Results */
+        .test-result-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .test-result-score {
+            font-size: 12px;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .test-result-content {
+            font-size: 13px;
+            color: #4a5568;
+            line-height: 1.5;
+        }
+        /* Document List */
+        .documents-section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .document-list {
             list-style: none;
         }
         .document-item {
-            margin-bottom: 15px;
-            padding: 15px;
-            background-color: #f9f9f9;
-            border-radius: 6px;
-            border-left: 4px solid #3498db;
+            display: flex;
+            align-items: center;
+            padding: 18px 20px;
+            background-color: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border-left: 5px solid #667eea;
             transition: all 0.3s ease;
         }
         .document-item:hover {
             background-color: #f0f0f0;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .document-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            margin-right: 15px;
+            flex-shrink: 0;
         }
         .document-info {
-            font-size: 16px;
+            flex: 1;
+            min-width: 0;
         }
-        .document-date {
+        .document-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .document-meta {
+            font-size: 13px;
+            color: #718096;
+            margin-top: 4px;
+            display: flex;
+            gap: 15px;
+        }
+        .document-chunks {
+            padding: 3px 10px;
+            background-color: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .document-actions {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .btn-delete {
+            padding: 10px 16px;
+            background-color: #fff;
+            color: #e53e3e;
+            border: 2px solid #e53e3e;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
             font-size: 14px;
-            color: #757575;
-            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-delete:hover {
+            background-color: #e53e3e;
+            color: white;
         }
         .no-documents {
-            padding: 20px;
-            background-color: #f0f8ff;
-            border-radius: 6px;
+            padding: 40px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
             text-align: center;
-            color: #6495ed;
+            color: #718096;
+        }
+        .no-documents-icon {
+            font-size: 64px;
+            color: #cbd5e0;
+            margin-bottom: 15px;
+        }
+        /* Delete Confirmation Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal-icon {
+            font-size: 48px;
+            color: #e53e3e;
+            margin-bottom: 15px;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .modal-text {
+            color: #718096;
+            margin-bottom: 25px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn-cancel {
+            padding: 12px 24px;
+            background-color: #e9ecef;
+            color: #4a5568;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-cancel:hover {
+            background-color: #dee2e6;
+        }
+        .btn-confirm {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(229, 62, 62, 0.4);
+        }
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            .document-item {
+                flex-wrap: wrap;
+            }
+            .document-actions {
+                width: 100%;
+                margin-top: 15px;
+                padding-top: 15px;
+                border-top: 1px solid #e9ecef;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Upload Documents</h1>
-            <a href="{{ url_for('index') }}" class="back-link">Back to Dashboard</a>
+            <h1><i class="fas fa-cloud-upload-alt"></i> 上传知识库文档</h1>
+            <a href="{{ url_for('main.index') }}" class="back-link">
+                <i class="fas fa-arrow-left"></i> 返回仪表盘
+            </a>
         </div>
-        
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="flash-messages">
-                {% for message in messages %}
-                    <div class="flash-message">{{ message }}</div>
-                {% endfor %}
+
+        <div class="content">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="flash-message {% if 'failed' in message.lower() %}flash-error{% else %}flash-success{% endif %}">
+                            <i class="fas {% if 'failed' in message.lower() %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Stats Bar -->
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalDocs">{{ documents|length }}</div>
+                    <div class="stat-label">已上传文档</div>
                 </div>
-            {% endif %}
-        {% endwith %}
-        
-        <div class="upload-form">
-            <form method="POST" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label>Select file to upload:</label>
-                    <input type="file" name="file" required>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalChunks">-</div>
+                    <div class="stat-label">知识库片段</div>
                 </div>
-                <button type="submit">Upload</button>
-            </form>
-        </div>
-        
-        <h2>Your Uploaded Documents</h2>
-        {% if documents %}
-            <ul class="document-list">
-                {% for doc in documents %}
-                    <li class="document-item">
-                        <div class="document-info">{{ doc.filename }}</div>
-                        <div class="document-date">Uploaded: {{ doc.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</div>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <div class="no-documents">
-                <p>No documents uploaded yet.</p>
             </div>
-        {% endif %}
+
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <h2><i class="fas fa-upload"></i> 上传文件</h2>
+
+                <!-- Settings Panel -->
+                <div style="margin-bottom: 15px;">
+                    <button class="btn-settings" onclick="toggleSettings()">
+                        <i class="fas fa-cog"></i> 高级设置
+                    </button>
+                </div>
+                <div class="settings-panel" id="settingsPanel" style="display: none;">
+                    <div class="setting-item">
+                        <label for="chunkSize">切片大小 (Chunk Size)</label>
+                        <input type="number" id="chunkSize" value="1000" min="100" max="5000" step="100">
+                        <span class="setting-hint">每个文本片段的大小，建议 500-2000</span>
+                    </div>
+                    <div class="setting-item">
+                        <label for="chunkOverlap">切片重叠 (Chunk Overlap)</label>
+                        <input type="number" id="chunkOverlap" value="200" min="0" max="500" step="50">
+                        <span class="setting-hint">相邻切片的重叠部分，建议 100-300</span>
+                    </div>
+                </div>
+
+                <div class="drop-zone" id="dropZone">
+                    <i class="fas fa-cloud-upload-alt drop-zone-icon"></i>
+                    <div class="drop-zone-text">拖拽文件到此处上传</div>
+                    <div class="drop-zone-hint">或点击选择文件</div>
+                    <div class="drop-zone-formats">
+                        <span class="format-badge">.txt</span>
+                        <span class="format-badge">.pdf</span>
+                        <span class="format-badge">.doc</span>
+                        <span class="format-badge">.docx</span>
+                    </div>
+                    <div class="drop-zone-hint" style="margin-top: 10px; font-size: 12px;">
+                        最大文件大小：16MB
+                    </div>
+                    <input type="file" name="file" class="drop-zone-input" id="fileInput"
+                           accept=".txt,.pdf,.doc,.docx" multiple>
+                </div>
+
+                <!-- Upload Progress -->
+                <div class="upload-progress" id="uploadProgress"></div>
+            </div>
+
+            <!-- Documents Section -->
+            <div class="documents-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0;"><i class="fas fa-folder-open"></i> 我的文档</h2>
+                    <button class="btn-settings" onclick="openTestModal()" style="padding: 8px 16px; font-size: 13px;">
+                        <i class="fas fa-search"></i> 测试检索
+                    </button>
+                </div>
+                {% if documents %}
+                    <ul class="document-list">
+                        {% for doc in documents %}
+                            <li class="document-item" data-id="{{ doc.id }}">
+                                <div class="document-icon">
+                                    {% if doc.filename.endswith('.pdf') %}
+                                        <i class="fas fa-file-pdf"></i>
+                                    {% elif doc.filename.endswith('.doc') or doc.filename.endswith('.docx') %}
+                                        <i class="fas fa-file-word"></i>
+                                    {% else %}
+                                        <i class="fas fa-file-alt"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="document-info">
+                                    <div class="document-name">{{ doc.filename }}</div>
+                                    <div class="document-meta">
+                                        <span><i class="far fa-calendar"></i> {{ doc.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                                        <span><i class="far fa-user"></i> {{ doc.user.username if doc.user else 'Unknown' }}</span>
+                                    </div>
+                                </div>
+                                <div class="document-actions">
+                                    <button class="btn-delete" onclick="confirmDelete({{ doc.id }}, '{{ doc.filename }}')">
+                                        <i class="fas fa-trash-alt"></i> 删除
+                                    </button>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="no-documents">
+                        <div class="no-documents-icon">
+                            <i class="fas fa-folder-open"></i>
+                        </div>
+                        <p>暂无上传文档</p>
+                        <p style="font-size: 14px; margin-top: 8px;">上传文档后，AI 将学习这些知识来回答用户问题</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
+
+    <!-- Test Retrieval Modal -->
+    <div class="modal-overlay" id="testModal">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-icon" style="color: #667eea;">
+                <i class="fas fa-search"></i>
+            </div>
+            <div class="modal-title">测试知识检索</div>
+            <div class="modal-text" style="text-align: left;">
+                <div class="setting-item">
+                    <label for="testQuery">输入测试问题</label>
+                    <input type="text" id="testQuery" placeholder="例如：如何重置密码？" style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;">
+                </div>
+                <div class="setting-item">
+                    <label for="testK">返回结果数</label>
+                    <input type="number" id="testK" value="3" min="1" max="10" style="width: 100px; padding: 8px; border: 2px solid #e9ecef; border-radius: 8px;">
+                </div>
+                <div id="testResults" style="margin-top: 15px; display: none;">
+                    <div style="font-weight: 600; margin-bottom: 10px; color: #2c3e50;">检索结果：</div>
+                    <div id="testResultsContent"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeTestModal()">关闭</button>
+                <button class="btn-confirm" onclick="runTestQuery()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <i class="fas fa-search"></i> 测试检索
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <div class="modal-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="modal-title">确认删除</div>
+            <div class="modal-text">
+                确定要删除文档 <strong id="deleteFileName"></strong> 吗？<br>
+                此操作将同时删除向量数据库中的相关知识片段。
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn-confirm" onclick="deleteDocument()">
+                    <i class="fas fa-trash-alt"></i> 确认删除
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let pendingDeleteId = null;
+        const ALLOWED_TYPES = ['text/plain', 'application/pdf', 'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        const MAX_SIZE = 16 * 1024 * 1024; // 16MB
+
+        // Get CSRF token from meta tag
+        function getCsrfToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.content || '';
+        }
+
+        // DOM Elements
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const deleteModal = document.getElementById('deleteModal');
+        const deleteFileName = document.getElementById('deleteFileName');
+        const settingsPanel = document.getElementById('settingsPanel');
+
+        // Toggle settings panel
+        function toggleSettings() {
+            if (settingsPanel) {
+                settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        // Drag & Drop Events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.classList.add('drag-over');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('drag-over');
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFileSelect, false);
+
+        function handleDrop(e) {
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            if (files.length === 0) return;
+
+            // Validate and upload each file
+            for (let file of files) {
+                if (!validateFile(file)) continue;
+                uploadFile(file);
+            }
+        }
+
+        function validateFile(file) {
+            // Check file type
+            const ext = file.name.split('.').pop().toLowerCase();
+            const allowedExts = ['txt', 'pdf', 'doc', 'docx'];
+            if (!allowedExts.includes(ext)) {
+                showFlash(`不支持的文件格式：${file.name}，支持格式：txt, pdf, doc, docx`, 'error');
+                return false;
+            }
+
+            // Check file size
+            if (file.size > MAX_SIZE) {
+                showFlash(`文件过大：${file.name}，最大支持 16MB`, 'error');
+                return false;
+            }
+
+            return true;
+        }
+
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            // Add chunking parameters
+            formData.append('chunk_size', document.getElementById('chunkSize').value);
+            formData.append('chunk_overlap', document.getElementById('chunkOverlap').value);
+
+            // Create progress item
+            const progressId = 'progress-' + Date.now();
+            const progressHtml = `
+                <div class="progress-item" id="${progressId}">
+                    <div class="progress-header">
+                        <div class="progress-filename">
+                            <i class="fas fa-file-upload"></i>
+                            ${escapeHtml(file.name)}
+                        </div>
+                        <div class="progress-status">上传中...</div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-details" style="margin-top: 8px; font-size: 13px; color: #718096;"></div>
+                </div>
+            `;
+
+            uploadProgress.innerHTML += progressHtml;
+            uploadProgress.classList.add('active');
+
+            // Simulate progress
+            const progressBar = document.querySelector(`#${progressId} .progress-bar-fill`);
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                if (progress < 80) {
+                    progress += Math.random() * 20;
+                    progressBar.style.width = progress + '%';
+                }
+            }, 200);
+
+            // Upload via AJAX
+            fetch('{{ url_for("main.upload") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            })
+            .then(response => {
+                clearInterval(progressInterval);
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
+                } else {
+                    // If not JSON, it might be a redirect or error page
+                    throw new Error('Server returned non-JSON response');
+                }
+            })
+            .then(data => {
+                const progressDetails = document.querySelector(`#${progressId} .progress-details`);
+
+                if (data.success) {
+                    progressBar.style.width = '100%';
+                    progressBar.classList.add('success');
+                    document.querySelector(`#${progressId} .progress-status`).textContent = '处理完成！';
+
+                    // Show detailed results
+                    if (data.is_duplicate) {
+                        progressDetails.innerHTML = `<i class="fas fa-info-circle"></i> 文档已存在，跳过 ${data.chunks_total} 个切片`;
+                        progressDetails.style.color = '#f59e0b';
+                    } else {
+                        progressDetails.innerHTML = `<i class="fas fa-check-circle"></i> 生成 ${data.chunks_total} 个切片，成功添加 ${data.chunks_added} 个`;
+                        progressDetails.style.color = '#10b981';
+                    }
+
+                    showFlash(data.message || `文件 "${file.name}" 上传并处理成功 (${data.chunks_added} 个切片)`, 'success');
+                    // Reload page after delay to show updated list
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    progressBar.classList.add('error');
+                    document.querySelector(`#${progressId} .progress-status`).textContent = '处理失败';
+                    if (progressDetails) {
+                        progressDetails.innerHTML = `<i class="fas fa-times-circle"></i> ${escapeHtml(data.message || '未知错误')}`;
+                        progressDetails.style.color = '#ef4444';
+                    }
+                    showFlash(data.message || `文件处理失败：${file.name}`, 'error');
+                }
+            })
+            .catch(error => {
+                clearInterval(progressInterval);
+                progressBar.classList.add('error');
+                document.querySelector(`#${progressId} .progress-status`).textContent = '上传失败';
+                showFlash(`网络错误：${error.message}`, 'error');
+            });
+        }
+
+        function showFlash(message, type) {
+            const flashDiv = document.createElement('div');
+            flashDiv.className = `flash-message flash-${type}`;
+            flashDiv.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                <span>${escapeHtml(message)}</span>
+            `;
+
+            const container = document.querySelector('.flash-messages') ||
+                document.createElement('div', {className: 'flash-messages'});
+
+            if (!document.querySelector('.flash-messages')) {
+                container.className = 'flash-messages';
+                document.querySelector('.content').insertBefore(container, document.querySelector('.stats-bar'));
+            }
+
+            document.querySelector('.flash-messages').appendChild(flashDiv);
+
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                flashDiv.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => flashDiv.remove(), 300);
+            }, 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Delete functionality
+        function confirmDelete(docId, filename) {
+            pendingDeleteId = docId;
+            deleteFileName.textContent = filename;
+            deleteModal.classList.add('active');
+        }
+
+        function closeModal() {
+            deleteModal.classList.remove('active');
+            pendingDeleteId = null;
+        }
+
+        function deleteDocument() {
+            if (!pendingDeleteId) return;
+
+            // Disable confirm button to prevent double-click
+            const confirmBtn = document.querySelector('.btn-confirm');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
+
+            fetch(`/document/${pendingDeleteId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 确认删除';
+
+                if (data.success) {
+                    showFlash(data.message, 'success');
+                    closeModal();
+
+                    // Remove document from list with animation
+                    const docItem = document.querySelector(`[data-id="${pendingDeleteId}"]`);
+                    if (docItem) {
+                        docItem.style.opacity = '0';
+                        docItem.style.transform = 'translateX(20px)';
+                        docItem.style.transition = 'all 0.3s ease';
+                        setTimeout(() => {
+                            docItem.remove();
+                            // Update docs count
+                            const docsCount = document.querySelectorAll('.document-item').length;
+                            document.getElementById('totalDocs').textContent = docsCount;
+
+                            // Refresh chunks count from server
+                            refreshDocumentCount();
+
+                            if (docsCount === 0) {
+                                setTimeout(() => location.reload(), 1000);
+                            }
+                        }, 300);
+                    } else {
+                        // Item not found in DOM, just refresh count
+                        refreshDocumentCount();
+                    }
+                } else {
+                    showFlash(data.message || '删除失败', 'error');
+                    closeModal();
+                }
+            })
+            .catch(error => {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 确认删除';
+                showFlash('网络错误：' + error.message, 'error');
+                closeModal();
+            });
+        }
+
+        function refreshDocumentCount() {
+            fetch('/api/document/count')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('totalChunks').textContent = data.count;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching document count:', error);
+                });
+        }
+
+        // Close modal on outside click
+        deleteModal.addEventListener('click', (e) => {
+            if (e.target === deleteModal) {
+                closeModal();
+            }
+        });
+
+        // Test query modal
+        const testModal = document.getElementById('testModal');
+
+        function openTestModal() {
+            testModal.classList.add('active');
+        }
+
+        function closeTestModal() {
+            testModal.classList.remove('active');
+            document.getElementById('testResults').style.display = 'none';
+        }
+
+        function runTestQuery() {
+            const query = document.getElementById('testQuery').value;
+            const k = parseInt(document.getElementById('testK').value) || 3;
+            const resultsDiv = document.getElementById('testResults');
+            const resultsContent = document.getElementById('testResultsContent');
+
+            if (!query.trim()) {
+                alert('请输入测试问题');
+                return;
+            }
+
+            resultsContent.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> 检索中...</div>';
+            resultsDiv.style.display = 'block';
+
+            fetch('/api/test-query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ query, k })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.results.length > 0) {
+                    let html = '';
+                    data.results.forEach((r, i) => {
+                        html += `
+                            <div class="test-result-item">
+                                <div class="test-result-score">
+                                    <i class="fas fa-chart-bar"></i> 相似度：${(r.similarity * 100).toFixed(1)}% | 来源：${r.source}
+                                </div>
+                                <div class="test-result-content">${escapeHtml(r.content)}</div>
+                            </div>
+                        `;
+                    });
+                    resultsContent.innerHTML = html;
+                } else if (data.success) {
+                    resultsContent.innerHTML = '<div style="text-align: center; padding: 20px; color: #f59e0b;"><i class="fas fa-exclamation-circle"></i> 未找到相关知识</div>';
+                } else {
+                    resultsContent.innerHTML = `<div style="text-align: center; padding: 20px; color: #ef4444;"><i class="fas fa-times-circle"></i> 错误：${escapeHtml(data.error || '未知错误')}</div>`;
+                }
+            })
+            .catch(error => {
+                resultsContent.innerHTML = `<div style="text-align: center; padding: 20px; color: #ef4444;"><i class="fas fa-times-circle"></i> 网络错误：${escapeHtml(error.message)}</div>`;
+            });
+        }
+
+        // Close test modal on outside click
+        testModal.addEventListener('click', (e) => {
+            if (e.target === testModal) {
+                closeTestModal();
+            }
+        });
+
+        // Fetch document count on load
+        fetch('/api/document/count')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('totalChunks').textContent = data.count;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching document count:', error);
+            });
+    </script>
 </body>
 </html>

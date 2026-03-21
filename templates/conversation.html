@@ -150,7 +150,7 @@
     <div class="container">
         <div class="header">
             <h1>Conversation #{{ conversation.id }}</h1>
-            <a href="{{ url_for('index') }}" class="back-link">Back to Dashboard</a>
+            <a href="{{ url_for('main.index') }}" class="back-link">Back to Dashboard</a>
         </div>
         
         {% if conversation.status == 'needs_attention' %}
@@ -173,7 +173,8 @@
             {% endfor %}
         </div>
         
-        <form method="POST" action="{{ url_for('send_message', conversation_id=conversation.id) }}" class="message-form">
+        <form method="POST" action="{{ url_for('main.send_message', conversation_id=conversation.id) }}" class="message-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="form-group">
                 <textarea name="content" required placeholder="Type your message here..."></textarea>
             </div>

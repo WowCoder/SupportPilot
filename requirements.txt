@@ -1,11 +1,29 @@
-Flask
-Flask-SQLAlchemy
-Flask-Login
-requests
-scikit-learn
-numpy
-langchain
-langchain_community
-pypdf
-python-docx
-faiss-cpu
+# Core Flask framework
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-WTF==1.2.1  # For CSRF protection and form validation
+Werkzeug==3.0.1
+
+# Database
+SQLAlchemy==2.0.23
+
+# HTTP requests
+requests==2.31.0
+
+# Machine Learning and RAG
+langchain==0.0.350
+langchain-community==0.0.10
+chromadb==0.4.22
+sentence-transformers==2.3.1
+
+# Document processing
+pypdf==3.17.4
+python-docx==1.1.0
+Docx2txt==0.8
+
+# Production server (optional, for production use)
+gunicorn==21.2.0
+
+# Environment variable management (optional, for development)
+python-dotenv==1.0.0
