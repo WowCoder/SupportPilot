@@ -26,5 +26,5 @@ if [ "$FLASK_ENV" = "production" ]; then
     gunicorn -c gunicorn_config.py wsgi:app
 else
     echo "Starting SupportPilot in development mode..."
-    python3 app.py
+    python3 -m flask --app wsgi:app run --debug
 fi

@@ -96,32 +96,32 @@ class TestInputSanitization:
 
     def test_sanitize_xss_script(self):
         """Test XSS script tag sanitization"""
-        from utils import sanitize_input
+        from app.utils import sanitize_input
         result = sanitize_input('<script>alert("xss")</script>')
         assert '<script>' not in result
 
     def test_sanitize_html_escape(self):
         """Test HTML escaping"""
-        from utils import sanitize_input
+        from app.utils import sanitize_input
         result = sanitize_input('<div>test</div>')
         assert '&lt;' in result
         assert '<div>' not in result
 
     def test_sanitize_empty_input(self):
         """Test empty input sanitization"""
-        from utils import sanitize_input
+        from app.utils import sanitize_input
         result = sanitize_input('')
         assert result == ''
 
     def test_sanitize_none_input(self):
         """Test None input sanitization"""
-        from utils import sanitize_input
+        from app.utils import sanitize_input
         result = sanitize_input(None)
         assert result == ''
 
     def test_sanitize_long_input(self):
         """Test long input truncation"""
-        from utils import sanitize_input
+        from app.utils import sanitize_input
         long_input = 'a' * 15000
         result = sanitize_input(long_input)
         assert len(result) <= 10000
