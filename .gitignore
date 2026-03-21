@@ -51,3 +51,7 @@ rag/documents.pkl
 # Chroma database
 chroma_db/
 *.chroma
+
+# Test artifacts
+test_uploads/
+test_knowledge.txt

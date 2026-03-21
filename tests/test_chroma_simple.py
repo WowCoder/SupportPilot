@@ -3,7 +3,9 @@
 
 import sys
 import os
-sys.path.insert(0, '.')
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 print("=" * 50)
 print("Chroma RAG Integration Test")
@@ -33,10 +35,14 @@ SupportPilot 是一个基于 Flask 的智能客服系统，支持用户与 AI �
 3. 关闭或重新打开对话
 """
 
-with open('test_knowledge.txt', 'w', encoding='utf-8') as f:
+# Use absolute path for test file
+test_dir = os.path.dirname(os.path.abspath(__file__))
+test_file = os.path.join(test_dir, 'test_knowledge.txt')
+
+with open(test_file, 'w', encoding='utf-8') as f:
     f.write(test_content)
 
-result = rag_utils.process_document('test_knowledge.txt')
+result = rag_utils.process_document(test_file)
 print(f"✓ Document processed: {result}")
 print(f"✓ Document count after: {rag_utils.get_document_count()}")
 
@@ -53,13 +59,13 @@ for i, r in enumerate(results, 1):
 # Test 4: Deduplication
 print("\n[TEST 4] Test deduplication...")
 count_before = rag_utils.get_document_count()
-rag_utils.process_document('test_knowledge.txt')
+rag_utils.process_document(test_file)
 count_after = rag_utils.get_document_count()
 print(f"✓ Before: {count_before}, After: {count_after}")
 print(f"✓ Deduplication working: {count_before == count_after}")
 
 # Cleanup
-os.remove('test_knowledge.txt')
+os.remove(test_file)
 
 print("\n" + "=" * 50)
 print("All tests passed!")
