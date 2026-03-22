@@ -9,7 +9,7 @@ SupportPilot 是一个基于 Flask 的智能客户支持系统，使用了 RAG (
 - **后端框架**：Flask 3.0
 - **数据库**：SQLite (开发) / PostgreSQL (生产)
 - **认证**：Flask-Login
-- **RAG 技术**：LangChain + TF-IDF
+- **RAG 技术**：LangChain + Chroma + SentenceTransformer
 - **API**：Alibaba Qwen API
 - **前端**：HTML 模板
 - **生产服务器**：Gunicorn
@@ -71,34 +71,110 @@ SupportPilot/
 ## 核心功能
 
 ### 1. 用户管理
-- 用户注册和登录
-- 密码安全存储（使用 PBKDF2 哈希）
-- 基于角色的访问控制（用户和技术支持）
-- 密码强度验证
 
 ### 2. 会话管理
-- 创建新会话
-- 查看会话历史（带分页）
-- 会话状态跟踪（active、needs_attention、closed）
-- 技术支持可以关闭/重新打开会话
 
 ### 3. 智能客服
-- 用户发送消息后，系统使用 RAG 检索相关文档信息
-- 系统使用 Alibaba Qwen API 生成智能回复
-- 当消息数达到 3 条时，会话自动标记为 "needs_attention"
-- AI 响应错误处理和友好的错误消息
 
 ### 4. 文档管理
-- 技术支持可以上传文档（支持 PDF、TXT、DOCX）
-- 系统自动处理文档并添加到 RAG 知识库
-- 文档去重机制
-- 文档列表分页显示
 
 ### 5. 技术支持功能
-- 技术支持仪表盘，查看所有会话（带分页）
-- 特别关注需要人工介入的会话
-- 技术支持可以直接回复用户消息
-- 关闭/重新打开会话
+
+---
+
+## RAG 检索增强生成流程
+
+### 架构图
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌─────────────┐
+│  用户上传   │ ──► │  文档分块    │ ──► │  向量化      │ ──► │  Chroma DB  │
+│  PDF/TXT/DOCX│     │  1500/300    │     │  Embedding   │     │   索引      │
+└─────────────┘     └──────────────┘     └─────────────┘     └─────────────┘
+                                                                    │
+                                                                    ▼
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌─────────────┐
+│  LLM 生成   │ ◄── │  重排序      │ ◄── │  混合检索   │ ◄── │  用户提问   │
+│  回答       │     │  Cross-Encoder│     │  BM25+ 向量   │     │  查询扩展   │
+└─────────────┘     └──────────────┘     └─────────────┘     └─────────────┘
+```
+
+### 阶段 1: 文档处理（上传时）
+
+**代码**: `rag/rag_utils.py:process_document()`
+
+| 步骤 | 说明 | 配置 |
+|------|------|------|
+| 文件加载 | 支持 PDF/TXT/DOCX | PyPDFLoader, TextLoader, Docx2txtLoader |
+| 文档分块 | 按字符切分 | chunk_size=1500, chunk_overlap=300 |
+| 去重处理 | MD5 哈希去重 | 防止重复文档 |
+| 向量化 | SentenceTransformer 嵌入 | all-MiniLM-L6-v2 |
+| 存储 | Chroma DB 持久化 | ./chroma_db |
+
+### 阶段 2: 查询处理（用户提问时）
+
+**代码**: `rag/rag_utils.py:_expand_query()`
+
+查询扩展 - 同义词替换提升召回率:
+- `account` → `user`, `profile`, `login`
+- `password` → `credential`, `authentication`, `reset`
+- `error` → `issue`, `problem`, `bug`, `failure`
+- `payment` → `billing`, `invoice`, `transaction`
+- `subscription` → `plan`, `pricing`, `renewal`, `upgrade`
+
+示例：用户问 `"reset password"` → 同时搜索 `["change credential", "reset authentication"]`
+
+### 阶段 3: 混合检索
+
+**代码**: `rag/rag_utils.py:_hybrid_search()`
+
+| 检索类型 | 优势 | 权重 |
+|----------|------|------|
+| BM25 关键词检索 | 精确匹配（错误码、产品名） | α=0.5 |
+| 向量语义检索 | 理解语义相似性 | 1-α=0.5 |
+
+**RRF 融合算法**:
+```
+RRF Score = α / (rank_bm25 + 60) + (1-α) / (rank_vector + 60)
+```
+
+### 阶段 4: Cross-Encoder 重排序
+
+**代码**: `rag/rag_utils.py:_rerank_with_cross_encoder()`
+
+- 模型：`cross-encoder/ms-marco-MiniLM-L-6-v2`
+- 作用：对粗排结果进行精细相关性评分
+- 流程：召回 9 条 → 重排序 → 返回 top 3
+
+### 阶段 5: LLM 生成回答
+
+**代码**: `api/qwen_api.py:generate_response()`
+
+- API：Alibaba Qwen (`qwen-turbo`)
+- Prompt 构建：相关知识 + 用户问题
+- 温度：0.7
+- 最大 token：1024
+
+### 性能特征
+
+| 阶段 | 耗时 |
+|------|------|
+| 查询扩展 | ~1ms |
+| BM25 检索 | ~10ms |
+| 向量检索 | ~50ms |
+| Cross-Encoder | ~100-200ms |
+| **总计** | **~200-300ms** |
+
+### 配置参数
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| chunk_size | 1500 | 分块大小（字符） |
+| chunk_overlap | 300 | 分块重叠 |
+| similarity_threshold | 0.25 | 最小相似度阈值 |
+| use_expansion | True | 启用查询扩展 |
+| use_hybrid | False | 启用混合检索（需手动开启） |
+| use_reranking | True | 启用 Cross-Encoder 重排序 |
 
 ## 快速开始
 
