@@ -2,6 +2,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from sentence_transformers import CrossEncoder
+import pdfplumber
 import os
 import logging
 import hashlib
@@ -10,6 +11,7 @@ import chromadb
 from chromadb.config import Settings
 from rank_bm25 import BM25Okapi
 import re
+from collections import Counter
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +126,166 @@ class RAGUtils:
         """Compute hash of document content for deduplication"""
         return hashlib.md5(content.encode('utf-8')).hexdigest()
 
+    def _clean_text(self, text):
+        """Clean extracted text from PDF (remove noise like standalone numbers)
+
+        Args:
+            text: Raw extracted text
+
+        Returns:
+            Cleaned text with noise removed
+        """
+        lines = text.split('\n')
+        cleaned_lines = []
+
+        for line in lines:
+            stripped = line.strip()
+            # Skip lines that are just numbers with dots (e.g., "1.", "2.", "10.")
+            if re.match(r'^\d+\.\s*$', stripped):
+                continue
+            # Skip very short lines (less than 5 chars) that are likely noise
+            if len(stripped) < 5 and re.match(r'^[\d\.\s]+$', stripped):
+                continue
+            cleaned_lines.append(line)
+
+        return '\n'.join(cleaned_lines)
+
+    def _extract_pdf_text_layout_aware(self, file_path):
+        """Extract text from PDF using pdfplumber with layout awareness
+
+        Args:
+            file_path: Path to PDF file
+
+        Returns:
+            list of dicts: [{'text': str, 'page': int, 'section': str}]
+        """
+        extracted_pages = []
+
+        try:
+            with pdfplumber.open(file_path) as pdf:
+                for page_num, page in enumerate(pdf.pages, 1):
+                    # Extract text with layout preservation
+                    # pdfplumber extracts text in reading order by default
+                    page_text = page.extract_text()
+
+                    if page_text:
+                        extracted_pages.append({
+                            'text': page_text,
+                            'page': page_num,
+                            'source': os.path.basename(file_path)
+                        })
+
+            logger.info(f'Extracted text from {len(extracted_pages)} pages using pdfplumber')
+            return extracted_pages
+
+        except Exception as e:
+            logger.error(f'Error extracting PDF text with pdfplumber: {e}')
+            # Fallback to PyPDFLoader
+            from langchain_community.document_loaders import PyPDFLoader
+            loader = PyPDFLoader(file_path)
+            documents = loader.load()
+            return [
+                {'text': doc.page_content, 'page': i+1, 'source': os.path.basename(file_path)}
+                for i, doc in enumerate(documents)
+            ]
+
+    def _detect_repeated_lines(self, pages, threshold=0.5):
+        """Detect header/footer lines that appear in multiple pages
+
+        Args:
+            pages: List of page texts
+            threshold: Minimum fraction of pages for a line to be considered repeated
+
+        Returns:
+            set of repeated lines to filter
+        """
+        if not pages:
+            return set()
+
+        line_counts = Counter()
+        for page_text in pages:
+            lines = set(page_text.strip().split('\n'))
+            for line in lines:
+                line_counts[line.strip()] += 1
+
+        # Lines appearing in more than threshold% of pages
+        min_count = int(len(pages) * threshold)
+        repeated = {line for line, count in line_counts.items()
+                   if count >= min_count and len(line) < 100}
+
+        logger.info(f'Detected {len(repeated)} repeated lines (headers/footers)')
+        return repeated
+
+    def _remove_headers_footers(self, text, repeated_lines):
+        """Remove header and footer lines from text
+
+        Args:
+            text: Page text
+            repeated_lines: Set of repeated lines to filter
+
+        Returns:
+            Cleaned text
+        """
+        lines = text.split('\n')
+        cleaned = []
+
+        for line in lines:
+            stripped = line.strip()
+            # Skip if it's a detected repeated line
+            if stripped in repeated_lines:
+                continue
+            # Skip page number patterns like "第 1 页" or "- 1 -"
+            if re.match(r'^(第\s*\d+\s*页|\s*[-=]+\s*\d+\s*[-=]+\s*)$', stripped):
+                continue
+            cleaned.append(line)
+
+        return '\n'.join(cleaned)
+
+    def _quality_score(self, text):
+        """Score text quality (0-100)
+
+        Args:
+            text: Text to score
+
+        Returns:
+            Quality score (0-100)
+        """
+        if not text or not text.strip():
+            return 0
+
+        score = 0
+        text_len = len(text.strip())
+
+        # Length score (20 points)
+        if 100 <= text_len <= 2000:
+            score += 20
+        elif 50 <= text_len < 100 or 2000 < text_len <= 3000:
+            score += 10
+
+        # Sentence completeness (20 points)
+        has_punctuation = bool(re.search(r'[,.!?!.:;?', text))
+        if has_punctuation:
+            score += 20
+
+        # Information density (20 points)
+        # Count meaningful characters (not just numbers/symbols)
+        meaningful = len(re.findall(r'[\u4e00-\u9fa5a-zA-Z]', text))
+        if text_len > 0 and meaningful / text_len > 0.3:
+            score += 20
+
+        # Noise ratio (20 points)
+        noise_pattern = r'^[\d\s\.\-\(\)]+$'
+        noise_lines = [l for l in text.split('\n') if re.match(noise_pattern, l.strip())]
+        if len(noise_lines) / max(len(text.split('\n')), 1) < 0.2:
+            score += 20
+
+        # Language detection (20 points) - simplified check
+        # Chinese or English characters should dominate
+        if meaningful > text_len * 0.5:
+            score += 20
+
+        return score
+
     def process_document(self, file_path, chunk_size=1500, chunk_overlap=300):
         """Process a document and add it to the Chroma collection (thread-safe)
 
@@ -145,8 +307,31 @@ class RAGUtils:
                 ext = os.path.splitext(file_path)[1].lower()
                 if ext == '.pdf':
                     try:
-                        loader = PyPDFLoader(file_path)
-                        documents = loader.load()
+                        # Use pdfplumber for layout-aware extraction
+                        pages = self._extract_pdf_text_layout_aware(file_path)
+
+                        # Detect repeated lines (headers/footers) across all pages
+                        page_texts = [p['text'] for p in pages]
+                        repeated_lines = self._detect_repeated_lines(page_texts)
+
+                        # Process each page
+                        documents = []
+                        for page_data in pages:
+                            # Remove headers/footers
+                            cleaned_text = self._remove_headers_footers(
+                                page_data['text'], repeated_lines
+                            )
+                            # Apply basic cleaning (remove numbered lines)
+                            cleaned_text = self._clean_text(cleaned_text)
+
+                            if cleaned_text.strip():
+                                documents.append(type('obj', (object,), {
+                                    'page_content': cleaned_text,
+                                    'metadata': {'page': page_data['page'], 'source': page_data['source']}
+                                })())
+
+                        logger.info(f'PDF processed with structural cleaning: {len(documents)} pages retained')
+
                     except FileNotFoundError as e:
                         logger.error(f'PDF file not found: {file_path}')
                         return {'success': False, 'chunks_added': 0, 'error': 'File not found'}
@@ -188,6 +373,20 @@ class RAGUtils:
                 chunks = text_splitter.split_documents(documents)
                 chunks_total = len(chunks)
 
+                # Filter low-quality chunks (P4: quality scoring)
+                filtered_chunks = []
+                for chunk in chunks:
+                    score = self._quality_score(chunk.page_content)
+                    if score >= 60:  # Quality threshold
+                        filtered_chunks.append(chunk)
+                    else:
+                        logger.debug(f'Filtered low-quality chunk (score={score}): {chunk.page_content[:50]}...')
+
+                if len(filtered_chunks) < chunks_total:
+                    logger.info(f'Filtered {chunks_total - len(filtered_chunks)} low-quality chunks, retained {len(filtered_chunks)}')
+
+                chunks = filtered_chunks
+
                 new_chunks = 0
                 documents_to_add = []
                 ids_to_add = []
@@ -205,7 +404,8 @@ class RAGUtils:
                         metadatas_to_add.append({
                             "source": os.path.basename(file_path),
                             "filepath": file_path,
-                            "content_hash": content_hash
+                            "content_hash": content_hash,
+                            "page": chunk.metadata.get('page', 0) if hasattr(chunk, 'metadata') else 0
                         })
                         new_chunks += 1
 
