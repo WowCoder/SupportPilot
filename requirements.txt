@@ -16,6 +16,14 @@ langchain==0.0.350
 langchain-community==0.0.10
 chromadb==0.4.22
 sentence-transformers==2.3.1
+pypdf==3.17.4
+
+# HuggingFace for embeddings
+huggingface-hub>=0.20.0
+
+# BM25 for hybrid search
+rank-bm25==0.2.2
+jieba==0.42.1  # Chinese text segmentation
 
 # Document processing
 pypdf==3.17.4
