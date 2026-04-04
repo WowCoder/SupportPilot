@@ -1,185 +1,124 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Conversation</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-        }
-        .container {
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 30px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        h1 {
-            color: #2c3e50;
-        }
-        .back-link {
-            padding: 8px 16px;
-            background-color: #95a5a6;
-            color: white;
-            border-radius: 4px;
-            text-decoration: none;
-            transition: background-color 0.3s ease;
-        }
-        .back-link:hover {
-            background-color: #7f8c8d;
-        }
-        .status-alert {
-            margin-bottom: 20px;
-            padding: 15px;
-            border-radius: 4px;
-            background-color: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-        .status-alert strong {
-            font-weight: 600;
-        }
-        .message-container {
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            height: 400px;
-            overflow-y: scroll;
-            background-color: #f9f9f9;
-        }
-        .message {
-            margin-bottom: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            max-width: 80%;
-        }
-        .message.user {
-            background-color: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            align-self: flex-end;
-            margin-left: auto;
-        }
-        .message.ai {
-            background-color: #e8f5e8;
-            border-left: 4px solid #4caf50;
-        }
-        .message.tech_support {
-            background-color: #fff3e0;
-            border-left: 4px solid #ff9800;
-        }
-        .message-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .message-sender {
-            font-weight: 600;
-            font-size: 14px;
-        }
-        .message-sender.user {
-            color: #1976d2;
-        }
-        .message-sender.ai {
-            color: #388e3c;
-        }
-        .message-sender.tech_support {
-            color: #e65100;
-        }
-        .message-time {
-            font-size: 12px;
-            color: #757575;
-        }
-        .message-content {
-            font-size: 16px;
-            line-height: 1.4;
-        }
-        .message-form {
-            margin-top: 30px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        textarea {
-            width: 100%;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            font-family: inherit;
-            resize: vertical;
-            min-height: 120px;
-        }
-        textarea:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-        }
-        button {
-            padding: 12px 24px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Conversation #{{ conversation.id }}</h1>
-            <a href="{{ url_for('main.index') }}" class="back-link">Back to Dashboard</a>
+{% extends "base.html" %}
+
+{% block title %}会话 #{{ conversation.id }} - SupportPilot{% endblock %}
+
+{% block content %}
+<div class="container container-md">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-comments"></i> 会话 #{{ conversation.id }}
+        </h1>
+        <div class="page-actions">
+            <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回
+            </a>
+            {% if current_user.role == 'tech_support' %}
+                {% if conversation.status == 'active' %}
+                <form method="POST" action="{{ url_for('conversation.mark_attention', conversation_id=conversation.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-exclamation-triangle"></i> 标记需关注
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('conversation.close_conversation', conversation_id=conversation.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times-circle"></i> 关闭会话
+                    </button>
+                </form>
+                {% elif conversation.status == 'needs_attention' %}
+                <form method="POST" action="{{ url_for('conversation.close_conversation', conversation_id=conversation.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check-circle"></i> 解决并关闭
+                    </button>
+                </form>
+                {% elif conversation.status == 'closed' %}
+                <form method="POST" action="{{ url_for('conversation.reopen_conversation', conversation_id=conversation.id) }}" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-redo"></i> 重新打开
+                    </button>
+                </form>
+                {% endif %}
+            {% endif %}
         </div>
-        
-        {% if conversation.status == 'needs_attention' %}
-            <div class="status-alert">
-                <strong>This conversation needs tech support attention!</strong>
-            </div>
-        {% endif %}
-        
-        <div class="message-container">
+    </div>
+
+    <!-- Status Alert -->
+    {% if conversation.status == 'needs_attention' %}
+    <div class="flash-message warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>
+            <strong>此会话需要技术支持关注！</strong>
+            <p class="mt-1">技术支持团队将尽快为您处理</p>
+        </div>
+    </div>
+    {% elif conversation.status == 'closed' %}
+    <div class="flash-message info">
+        <i class="fas fa-info-circle"></i>
+        <div>
+            <strong>此会话已关闭</strong>
+            <p class="mt-1">如需继续咨询，请重新打开会话或创建新会话</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Chat Container -->
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
             {% for message in messages %}
-                <div class="message {{ message.sender_type }}">
-                    <div class="message-header">
-                        <span class="message-sender {{ message.sender_type }}">
-                            {% if message.sender_type == 'user' %}You{% elif message.sender_type == 'ai' %}AI Assistant{% else %}Tech Support{% endif %}
+            <div class="chat-message {{ message.sender_type }}">
+                <div class="chat-message-bubble">
+                    <div class="chat-message-meta">
+                        <span class="chat-message-sender">
+                            {% if message.sender_type == 'user' %}
+                                <i class="fas fa-user"></i> 您
+                            {% elif message.sender_type == 'ai' %}
+                                <i class="fas fa-robot"></i> AI 助手
+                            {% else %}
+                                <i class="fas fa-headset"></i> 技术支持
+                            {% endif %}
                         </span>
-                        <span class="message-time">{{ message.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                        <span class="chat-message-time">
+                            {{ message.timestamp.strftime('%m-%d %H:%M') }}
+                        </span>
                     </div>
-                    <div class="message-content">{{ message.content }}</div>
+                    <div class="chat-message-content">
+                        {{ message.content }}
+                    </div>
                 </div>
+            </div>
             {% endfor %}
         </div>
-        
-        <form method="POST" action="{{ url_for('main.send_message', conversation_id=conversation.id) }}" class="message-form">
+
+        <!-- Message Input -->
+        {% if conversation.status != 'closed' %}
+        <form method="POST" action="{{ url_for('conversation.send_message', conversation_id=conversation.id) }}" class="chat-input-container">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <div class="form-group">
-                <textarea name="content" required placeholder="Type your message here..."></textarea>
-            </div>
-            <button type="submit">Send</button>
+            <textarea name="content" class="form-textarea"
+                      placeholder="输入您的消息..."
+                      required
+                      style="min-height: 80px; resize: none;"></textarea>
+            <button type="submit" class="btn btn-primary" style="align-self: flex-end;">
+                <i class="fas fa-paper-plane"></i> 发送
+            </button>
         </form>
+        {% else %}
+        <div class="flash-message info">
+            <i class="fas fa-info-circle"></i>
+            会话已关闭，无法发送消息。请重新打开会话或创建新会话。
+        </div>
+        {% endif %}
     </div>
-</body>
-</html>
+</div>
+
+<!-- Scroll to bottom script -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatMessages = document.getElementById('chatMessages');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+</script>
+{% endblock %}

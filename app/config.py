@@ -18,6 +18,8 @@ class Config:
     SECRET_KEY: Optional[str] = None
     TESTING: bool = False
     DEBUG: bool = False
+    HOST: str = '127.0.0.1'
+    PORT: int = 5001
 
     # Database
     SQLALCHEMY_DATABASE_URI: str = 'sqlite:///app.db'

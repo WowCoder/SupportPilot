@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}SupportPilot{% endblock %}</title>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    {% block navbar %}
+    <nav class="navbar">
+        <a href="{{ url_for('main.index') }}" class="navbar-brand">
+            <i class="fas fa-headset"></i> SupportPilot
+        </a>
+        {% if current_user.is_authenticated %}
+        <ul class="navbar-nav">
+            <li><a href="{{ url_for('main.index') }}"><i class="fas fa-home"></i> 首页</a></li>
+            {% if current_user.role == 'tech_support' %}
+            <li><a href="{{ url_for('document.upload') }}"><i class="fas fa-upload"></i> 上传文档</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> 退出</a></li>
+        </ul>
+        {% endif %}
+    </nav>
+    {% endblock %}
+
+    <!-- Flash Messages -->
+    {% block flash_messages %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="container">
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                <div class="flash-message {{ category }}">
+                    {% if category == 'error' %}
+                        <i class="fas fa-exclamation-circle"></i>
+                    {% elif category == 'success' %}
+                        <i class="fas fa-check-circle"></i>
+                    {% elif category == 'warning' %}
+                        <i class="fas fa-exclamation-triangle"></i>
+                    {% else %}
+                        <i class="fas fa-info-circle"></i>
+                    {% endif %}
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    {% endwith %}
+    {% endblock %}
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    {% block footer %}
+    <footer class="footer">
+        <p>&copy; 2024 SupportPilot. All rights reserved.</p>
+    </footer>
+    {% endblock %}
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

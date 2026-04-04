@@ -1,162 +1,149 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Tech Support Dashboard</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-        }
-        .container {
-            max-width: 900px;
-            margin: 50px auto;
-            padding: 30px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        h1 {
-            color: #2c3e50;
-        }
-        .header-links {
-            display: flex;
-            gap: 10px;
-        }
-        .header-link {
-            padding: 8px 16px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: background-color 0.3s ease;
-        }
-        .logout-link {
-            background-color: #e74c3c;
-            color: white;
-        }
-        .logout-link:hover {
-            background-color: #c0392b;
-        }
-        .upload-link {
-            background-color: #27ae60;
-            color: white;
-        }
-        .upload-link:hover {
-            background-color: #229954;
-        }
-        h2 {
-            margin: 30px 0 20px;
-            color: #34495e;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ecf0f1;
-        }
-        .conversation-list {
-            list-style: none;
-        }
-        .conversation-item {
-            margin-bottom: 15px;
-            padding: 15px;
-            background-color: #f9f9f9;
-            border-radius: 6px;
-            border-left: 4px solid #3498db;
-            transition: all 0.3s ease;
-        }
-        .conversation-item:hover {
-            background-color: #f0f0f0;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        .conversation-item.needs-attention {
-            border-left-color: #e74c3c;
-            background-color: #fef5f5;
-        }
-        .conversation-item a {
-            text-decoration: none;
-            color: #333;
-            display: block;
-        }
-        .conversation-item .conversation-info {
-            font-size: 16px;
-            margin-bottom: 5px;
-        }
-        .conversation-item .status {
-            font-size: 14px;
-            font-weight: 500;
-        }
-        .status.needs-attention {
-            color: #e74c3c;
-        }
-        .status.active {
-            color: #27ae60;
-        }
-        .no-conversations {
-            padding: 20px;
-            background-color: #f0f8ff;
-            border-radius: 6px;
-            text-align: center;
-            color: #6495ed;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Tech Support Dashboard</h1>
-            <div class="header-links">
-                <a href="{{ url_for('main.upload') }}" class="header-link upload-link">Upload Documents</a>
-                <a href="{{ url_for('main.logout') }}" class="header-link logout-link">Logout</a>
-            </div>
+{% extends "base.html" %}
+
+{% block title %}技术支持仪表盘 - SupportPilot{% endblock %}
+
+{% block content %}
+<div class="container container-lg">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-headset"></i> 技术支持仪表盘
+        </h1>
+        <div class="page-actions">
+            <a href="{{ url_for('document.upload') }}" class="btn btn-success">
+                <i class="fas fa-upload"></i> 上传文档
+            </a>
         </div>
-        
-        <h2>Conversations Needing Attention</h2>
-        {% if needs_attention %}
-            <ul class="conversation-list">
-                {% for conversation in needs_attention %}
-                    <li class="conversation-item needs-attention">
-                        <a href="{{ url_for('main.conversation', conversation_id=conversation.id) }}">
-                            <div class="conversation-info">
-                                Conversation #{{ conversation.id }} - {{ conversation.created_at.strftime('%Y-%m-%d %H:%M') }}
-                            </div>
-                            <div class="status needs-attention">(Needs Attention)</div>
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <div class="no-conversations">
-                <p>No conversations need attention at the moment.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <div class="stat-value">{{ conversations|length }}</div>
+            <div class="stat-label">总会话数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" style="color: var(--color-success);">
+                {{ conversations|selectattr('status', 'equalto', 'active')|list|length }}
             </div>
-        {% endif %}
-        
-        <h2>All Conversations</h2>
-        <ul class="conversation-list">
-            {% for conversation in conversations %}
-                <li class="conversation-item {% if conversation.status == 'needs_attention' %}needs-attention{% endif %}">
-                    <a href="{{ url_for('main.conversation', conversation_id=conversation.id) }}">
-                        <div class="conversation-info">
-                            Conversation #{{ conversation.id }} - {{ conversation.created_at.strftime('%Y-%m-%d %H:%M') }}
+            <div class="stat-label">进行中</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" style="color: var(--color-danger);">
+                {{ needs_attention|length if needs_attention else 0 }}
+            </div>
+            <div class="stat-label">需关注</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" style="color: var(--color-warning);">
+                {{ conversations|selectattr('status', 'equalto', 'closed')|list|length }}
+            </div>
+            <div class="stat-label">已关闭</div>
+        </div>
+    </div>
+
+    <!-- Conversations Needing Attention -->
+    <div class="card mb-6">
+        <div class="card-header" style="border-left: 4px solid var(--color-danger);">
+            <h2><i class="fas fa-exclamation-triangle text-danger"></i> 需关注的会话</h2>
+        </div>
+        <div class="card-body">
+            {% if needs_attention %}
+            <ul class="list">
+                {% for conversation in needs_attention %}
+                <li class="list-item" style="border-left-color: var(--color-danger); background-color: var(--color-danger-bg);">
+                    <a href="{{ url_for('conversation.view', conversation_id=conversation.id) }}" class="list-item-link">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-semibold">
+                                    会话 #{{ conversation.id }}
+                                    <span class="badge badge-danger ml-2">
+                                        <i class="fas fa-exclamation-triangle"></i> 需关注
+                                    </span>
+                                </div>
+                                <div class="text-sm text-gray mt-1">
+                                    <i class="fas fa-clock"></i> {{ conversation.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                </div>
+                            </div>
+                            <div class="text-gray">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
                         </div>
-                        {% if conversation.status == 'needs_attention' %}
-                            <div class="status needs-attention">(Needs Attention)</div>
-                        {% elif conversation.status == 'active' %}
-                            <div class="status active">(Active)</div>
-                        {% endif %}
                     </a>
                 </li>
-            {% endfor %}
-        </ul>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="text-center p-6">
+                <i class="fas fa-check-circle text-success" style="font-size: 48px;"></i>
+                <p class="text-gray mt-4">太棒了！所有会话都已处理完毕</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
-</body>
-</html>
+
+    <!-- All Conversations -->
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-inbox"></i> 所有会话</h2>
+        </div>
+        <div class="card-body">
+            {% if conversations %}
+            <ul class="list">
+                {% for conversation in conversations %}
+                <li class="list-item {% if conversation.status == 'needs_attention' %}needs-attention{% endif %}">
+                    <a href="{{ url_for('conversation.view', conversation_id=conversation.id) }}" class="list-item-link">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-semibold">
+                                    会话 #{{ conversation.id }}
+                                    {% if conversation.status == 'needs_attention' %}
+                                        <span class="badge badge-danger ml-2">
+                                            <i class="fas fa-exclamation-triangle"></i> 需关注
+                                        </span>
+                                    {% elif conversation.status == 'active' %}
+                                        <span class="badge badge-success ml-2">
+                                            <i class="fas fa-check-circle"></i> 进行中
+                                        </span>
+                                    {% elif conversation.status == 'closed' %}
+                                        <span class="badge badge-gray ml-2">
+                                            <i class="fas fa-times-circle"></i> 已关闭
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-sm text-gray mt-1">
+                                    <i class="fas fa-clock"></i> {{ conversation.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                    <span class="ml-3">
+                                        <i class="fas fa-user"></i> 用户 #{{ conversation.user_id }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="text-gray">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
+                        </div>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="text-center p-6">
+                <i class="fas fa-inbox text-gray" style="font-size: 48px;"></i>
+                <p class="text-gray mt-4">暂无会话</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .list-item.needs-attention {
+        border-left-color: var(--color-danger);
+        background-color: var(--color-danger-bg);
+    }
+    .ml-2 { margin-left: var(--spacing-2); }
+    .ml-3 { margin-left: var(--spacing-3); }
+</style>
+{% endblock %}

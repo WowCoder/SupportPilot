@@ -16,6 +16,7 @@ __pycache__/
 # IDE files
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 *~
@@ -55,3 +56,4 @@ chroma_db/
 # Test artifacts
 test_uploads/
 test_knowledge.txt
+.gstack/

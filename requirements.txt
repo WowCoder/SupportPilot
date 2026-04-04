@@ -14,6 +14,7 @@ requests==2.31.0
 # Machine Learning and RAG
 langchain==0.0.350
 langchain-community==0.0.10
+langchain-experimental>=0.0.50  # For SemanticChunker
 chromadb==0.4.22
 sentence-transformers==2.3.1
 pypdf==3.17.4
@@ -29,7 +30,6 @@ jieba==0.42.1  # Chinese text segmentation
 pdfplumber==0.10.3
 
 # Document processing
-pypdf==3.17.4
 python-docx==1.1.0
 Docx2txt==0.8
 

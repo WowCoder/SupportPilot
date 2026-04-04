@@ -5,9 +5,9 @@ Handles document upload and management for tech support.
 """
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_login import current_user, login_required
-from werkzeug.utils import secure_filename
 import os
 import logging
+import re
 
 from ..extensions import db
 from ..models import Document
@@ -15,6 +15,56 @@ from rag.rag_utils import rag_utils
 
 logger = logging.getLogger(__name__)
 document_bp = Blueprint('document', __name__, url_prefix='/')
+
+
+def safe_filename(filename):
+    """Safely sanitize filename while preserving Unicode characters like Chinese
+
+    Args:
+        filename: Original filename
+
+    Returns:
+        Sanitized filename with Unicode preserved
+    """
+    # Remove path separators and null bytes
+    filename = filename.replace('/', '_').replace('\\', '_').replace('\x00', '')
+
+    # Remove leading/trailing spaces and dots
+    filename = filename.strip(' .')
+
+    # Separate base name and extension to preserve the extension dot
+    if '.' in filename:
+        base, ext = filename.rsplit('.', 1)
+        ext = ext.lower()  # Normalize extension to lowercase
+    else:
+        base = filename
+        ext = None
+
+    # Replace consecutive spaces in base name with single underscore
+    base = re.sub(r'\s+', '_', base)
+
+    # Remove any character that isn't alphanumeric, underscore, hyphen from base
+    # But preserve Unicode letters (Chinese, etc.)
+    result = []
+    for char in base:
+        if char.isalnum() or char in '_-':
+            result.append(char)
+        elif ord(char) > 127:  # Preserve Unicode characters
+            result.append(char)
+        else:
+            result.append('_')
+
+    sanitized = ''.join(result)
+
+    # Reattach extension
+    if ext:
+        sanitized = f'{sanitized}.{ext}'
+
+    # Ensure we don't end up with empty filename
+    if not sanitized or sanitized == '.':
+        sanitized = 'uploaded_file'
+
+    return sanitized
 
 
 @document_bp.route('/upload', methods=['GET', 'POST'])
@@ -45,17 +95,28 @@ def upload():
 
         if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']:
             try:
-                filename = secure_filename(file.filename)
+                filename = safe_filename(file.filename)
                 filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
                 logger.info(f'File uploaded: {filename} by user {current_user.username}')
 
                 # Get chunking parameters from request (with defaults)
-                chunk_size = request.form.get('chunk_size', 1000, type=int)
-                chunk_overlap = request.form.get('chunk_overlap', 200, type=int)
+                chunk_size = request.form.get('chunk_size', 1500, type=int)
+                chunk_overlap = request.form.get('chunk_overlap', 300, type=int)
+                strategy = request.form.get('strategy', 'semantic', type=str)
+                semantic_threshold = request.form.get('semantic_threshold', 0.5, type=float)
+
+                # Validate strategy parameter
+                valid_strategies = ['semantic', 'sentence', 'recursive']
+                if strategy not in valid_strategies:
+                    strategy = 'semantic'  # Default to best quality
+
+                # Validate semantic_threshold (should be between 0.1 and 0.9)
+                if semantic_threshold < 0.1 or semantic_threshold > 0.9:
+                    semantic_threshold = 0.5  # Default
 
                 # Process document for RAG
-                result = rag_utils.process_document(filepath, chunk_size, chunk_overlap)
+                result = rag_utils.process_document(filepath, strategy, chunk_size, chunk_overlap, semantic_threshold)
 
                 if result.get('success'):
                     # Add to database
@@ -71,6 +132,7 @@ def upload():
                     chunks_added = result.get('chunks_added', 0)
                     chunks_total = result.get('chunks_total', 0)
                     is_duplicate = result.get('is_duplicate', False)
+                    used_strategy = result.get('strategy', strategy)
 
                     if is_ajax:
                         return jsonify({
@@ -78,9 +140,10 @@ def upload():
                             'message': f'文件 "{filename}" 上传并处理成功',
                             'chunks_added': chunks_added,
                             'chunks_total': chunks_total,
+                            'strategy': used_strategy,
                             'is_duplicate': is_duplicate
                         })
-                    flash(f'File uploaded and processed successfully ({chunks_added} chunks added)')
+                    flash(f'File uploaded and processed successfully ({chunks_added} chunks added using {used_strategy} strategy)')
                     return redirect(url_for('document.upload'))
                 else:
                     error_msg = result.get('error', 'Unknown error')

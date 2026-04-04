@@ -1,135 +1,113 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>User Dashboard</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-        }
-        .container {
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 30px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        h1 {
-            color: #2c3e50;
-        }
-        .logout-link {
-            padding: 8px 16px;
-            background-color: #e74c3c;
-            color: white;
-            border-radius: 4px;
-            text-decoration: none;
-            transition: background-color 0.3s ease;
-        }
-        .logout-link:hover {
-            background-color: #c0392b;
-        }
-        h2 {
-            margin-bottom: 20px;
-            color: #34495e;
-        }
-        .new-conversation {
-            margin-bottom: 30px;
-        }
-        .new-conversation button {
-            padding: 10px 20px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        .new-conversation button:hover {
-            background-color: #2980b9;
-        }
-        .conversation-list {
-            list-style: none;
-        }
-        .conversation-item {
-            margin-bottom: 15px;
-            padding: 15px;
-            background-color: #f9f9f9;
-            border-radius: 6px;
-            border-left: 4px solid #3498db;
-            transition: all 0.3s ease;
-        }
-        .conversation-item:hover {
-            background-color: #f0f0f0;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        .conversation-item a {
-            text-decoration: none;
-            color: #333;
-            display: block;
-        }
-        .conversation-item .conversation-info {
-            font-size: 16px;
-            margin-bottom: 5px;
-        }
-        .conversation-item .status {
-            font-size: 14px;
-            font-weight: 500;
-        }
-        .status.needs-attention {
-            color: #e74c3c;
-        }
-        .status.active {
-            color: #27ae60;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Welcome, {{ current_user.username }}!</h1>
-            <a href="{{ url_for('main.logout') }}" class="logout-link">Logout</a>
+{% extends "base.html" %}
+
+{% block title %}用户仪表盘 - SupportPilot{% endblock %}
+
+{% block content %}
+<div class="container container-md">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-user-circle"></i> 欢迎，{{ current_user.username }}!
+        </h1>
+        <div class="page-actions">
+            <span class="badge badge-primary">
+                <i class="fas fa-shield-alt"></i> {{ '技术支持' if current_user.role == 'tech_support' else '用户' }}
+            </span>
         </div>
-        
-        <h2>Your Conversations</h2>
-        <div class="new-conversation">
-            <form method="POST" action="{{ url_for('main.create_conversation') }}">
+    </div>
+
+    <!-- Stats -->
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <div class="stat-value">{{ conversations|length }}</div>
+            <div class="stat-label">会话总数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {{ conversations|selectattr('status', 'equalto', 'active')|list|length }}
+            </div>
+            <div class="stat-label">进行中会话</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {{ conversations|selectattr('status', 'equalto', 'needs_attention')|list|length }}
+            </div>
+            <div class="stat-label">需关注会话</div>
+        </div>
+    </div>
+
+    <!-- New Conversation -->
+    <div class="card mb-6">
+        <div class="card-body">
+            <h2><i class="fas fa-comments"></i> 开始新的会话</h2>
+            <p class="text-gray mb-4">创建一个新的会话，与我们的 AI 客服或技术支持团队交流</p>
+            <form method="POST" action="{{ url_for('conversation.create_conversation') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <button type="submit">Start New Conversation</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> 创建会话
+                </button>
             </form>
         </div>
-        
-        <ul class="conversation-list">
-            {% for conversation in conversations %}
-                <li class="conversation-item">
-                    <a href="{{ url_for('main.conversation', conversation_id=conversation.id) }}">
-                        <div class="conversation-info">
-                            Conversation #{{ conversation.id }} - {{ conversation.created_at.strftime('%Y-%m-%d %H:%M') }}
+    </div>
+
+    <!-- Conversation List -->
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-inbox"></i> 我的会话</h2>
+        </div>
+        <div class="card-body">
+            {% if conversations %}
+            <ul class="list">
+                {% for conversation in conversations %}
+                <li class="list-item {% if conversation.status == 'needs_attention' %}needs-attention{% endif %}">
+                    <a href="{{ url_for('conversation.view', conversation_id=conversation.id) }}" class="list-item-link">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-semibold">
+                                    会话 #{{ conversation.id }}
+                                    {% if conversation.status == 'needs_attention' %}
+                                        <span class="badge badge-danger ml-2">
+                                            <i class="fas fa-exclamation-triangle"></i> 需技术支持
+                                        </span>
+                                    {% elif conversation.status == 'active' %}
+                                        <span class="badge badge-success ml-2">
+                                            <i class="fas fa-check-circle"></i> 进行中
+                                        </span>
+                                    {% elif conversation.status == 'closed' %}
+                                        <span class="badge badge-gray ml-2">
+                                            <i class="fas fa-times-circle"></i> 已关闭
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-sm text-gray mt-1">
+                                    <i class="fas fa-clock"></i> {{ conversation.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                </div>
+                            </div>
+                            <div class="text-gray">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
                         </div>
-                        {% if conversation.status == 'needs_attention' %}
-                            <div class="status needs-attention">(Needs Tech Support)</div>
-                        {% elif conversation.status == 'active' %}
-                            <div class="status active">(Active)</div>
-                        {% endif %}
                     </a>
                 </li>
-            {% endfor %}
-        </ul>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="text-center p-6">
+                <i class="fas fa-inbox text-gray" style="font-size: 48px;"></i>
+                <p class="text-gray mt-4">暂无会话，点击上方按钮创建一个新的会话吧！</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .list-item.needs-attention {
+        border-left-color: var(--color-danger);
+        background-color: var(--color-danger-bg);
+    }
+    .ml-2 { margin-left: var(--spacing-2); }
+</style>
+{% endblock %}

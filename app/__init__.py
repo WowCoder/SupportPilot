@@ -49,7 +49,9 @@ def create_app(config_class=None) -> Flask:
     Returns:
         Configured Flask application instance
     """
-    app = Flask(__name__)
+    app = Flask(__name__,
+                template_folder='../templates',
+                static_folder='../static')
 
     # Load configuration
     if config_class is None:
@@ -72,8 +74,14 @@ def create_app(config_class=None) -> Flask:
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'main.login'
+    login_manager.login_view = 'auth.login'
     csrf.init_app(app)
+
+    # Add global template functions
+    @app.context_processor
+    def inject_globals():
+        from datetime import datetime
+        return {'now': datetime}
 
     # Register blueprints
     from .auth.routes import auth_bp
@@ -87,6 +95,9 @@ def create_app(config_class=None) -> Flask:
     app.register_blueprint(conversation_bp)
     app.register_blueprint(document_bp)
     app.register_blueprint(api_bp)
+
+    # Exempt API blueprint from CSRF protection
+    csrf.exempt(api_bp)
 
     # Create database tables
     with app.app_context():
