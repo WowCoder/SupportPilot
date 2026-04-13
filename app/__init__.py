@@ -89,15 +89,18 @@ def create_app(config_class=None) -> Flask:
     from .conversation.routes import conversation_bp
     from .document.routes import document_bp
     from .api.routes import api_bp
+    from .api.chat_memory_routes import chat_memory_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(conversation_bp)
     app.register_blueprint(document_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(chat_memory_bp)
 
     # Exempt API blueprint from CSRF protection
     csrf.exempt(api_bp)
+    csrf.exempt(chat_memory_bp)
 
     # Create database tables
     with app.app_context():

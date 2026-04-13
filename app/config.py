@@ -44,6 +44,19 @@ class Config:
     # Logging
     LOG_LEVEL: int = logging.INFO
 
+    # Chat Memory System
+    CHAT_MEMORY_WINDOW_SIZE: int = 5
+    CHAT_MEMORY_COMPRESSION_BATCH_SIZE: int = 5
+    CHAT_MEMORY_IDLE_THRESHOLD_SECONDS: int = 30
+    CHAT_MEMORY_COMPRESSION_MAX_DELAY_SECONDS: int = 120  # 2 minutes fallback
+    CHAT_MEMORY_COMPRESSION_QUEUE_MAX: int = 10
+    CHAT_MEMORY_QUERY_REWRITE_ENABLED: bool = True
+    CHAT_MEMORY_QUERY_REWRITE_TIMEOUT_SECONDS: int = 5
+
+    # FAQ
+    FAQ_SIMILARITY_THRESHOLD: float = 0.9
+    SUMMARY_COMPRESSION_RATIO_TARGET: int = 10
+
 
 class ProductionConfig(Config):
     """Production configuration"""

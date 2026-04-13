@@ -67,6 +67,13 @@ def send_message(conversation_id):
     )
     db.session.add(message)
 
+    # Add to chat memory for window management
+    try:
+        from ..services.chat_memory_service import chat_memory_service
+        chat_memory_service.add_record(conversation_id, sender_type, content)
+    except Exception as e:
+        logger.warning(f'Failed to add to chat memory: {e}')
+
     # Update conversation stats
     conversation.message_count += 1
     conversation.last_message_at = message.timestamp
@@ -80,16 +87,28 @@ def send_message(conversation_id):
     # AI response if user is sending and conversation is active
     if current_user.role == 'user' and conversation.status == 'active':
         try:
-            # Use RAG to retrieve relevant information
-            relevant_info = rag_utils.retrieve_relevant_info(content, k=3)
+            # Get conversation context from chat memory
+            from ..services.chat_memory_service import chat_memory_service
+            from ..services.query_rewriter import query_rewriter
+
+            # Rewrite query using conversation history
+            rewritten_query = query_rewriter.rewrite_query(content, conversation_id)
+
+            # Use RAG to retrieve relevant information with rewritten query
+            relevant_info = rag_utils.retrieve_relevant_info(rewritten_query, k=3)
+
             # Generate response using Qwen API
-            ai_response = qwen_api.generate_response(content, relevant_info)
+            ai_response = qwen_api.generate_response(rewritten_query, relevant_info)
             ai_message = Message(
                 conversation_id=conversation_id,
                 sender_type='ai',
                 content=ai_response
             )
             db.session.add(ai_message)
+
+            # Also add AI response to chat memory
+            chat_memory_service.add_record(conversation_id, 'ai', ai_response)
+
             conversation.message_count += 1
             conversation.last_message_at = ai_message.timestamp
             db.session.commit()
@@ -103,7 +122,7 @@ def send_message(conversation_id):
 @conversation_bp.route('/<int:conversation_id>/close', methods=['POST'])
 @login_required
 def close_conversation(conversation_id):
-    """Close a conversation (tech support only)"""
+    """Close a conversation (tech support only) with optional FAQ generation"""
     conversation = Conversation.query.get_or_404(conversation_id)
 
     if current_user.role != 'tech_support':
@@ -111,10 +130,30 @@ def close_conversation(conversation_id):
         flash('Only tech support can close conversations')
         return redirect(url_for('conversation.view', conversation_id=conversation_id))
 
+    # Check if FAQ generation is requested
+    generate_faq = request.form.get('generate_faq') == 'on'
+
     conversation.status = 'closed'
     db.session.commit()
     logger.info(f'Conversation {conversation_id} closed by {current_user.username}')
     flash('Conversation closed successfully')
+
+    # Generate FAQ if requested
+    if generate_faq:
+        try:
+            from ..services.faq_generator import faq_generator
+            result = faq_generator.generate_from_session(conversation_id)
+
+            if result['success']:
+                flash(f"FAQ generated: {result['faq_count']} entries created ({result['duplicates_skipped']} duplicates skipped)")
+                logger.info(f'FAQ generated for conversation {conversation_id}: {result["faq_count"]} entries')
+            else:
+                flash(f"FAQ generation failed: {result.get('error', 'Unknown error')}")
+                logger.warning(f'FAQ generation failed for conversation {conversation_id}: {result.get("error")}')
+        except Exception as e:
+            flash(f"FAQ generation error: {str(e)}")
+            logger.error(f'Error generating FAQ for conversation {conversation_id}: {e}', exc_info=True)
+
     return redirect(url_for('main.index'))
 
 

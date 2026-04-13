@@ -21,19 +21,13 @@
                         <i class="fas fa-exclamation-triangle"></i> 标记需关注
                     </button>
                 </form>
-                <form method="POST" action="{{ url_for('conversation.close_conversation', conversation_id=conversation.id) }}" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-times-circle"></i> 关闭会话
-                    </button>
-                </form>
+                <button type="button" class="btn btn-danger" onclick="showCloseModal()">
+                    <i class="fas fa-times-circle"></i> 关闭会话
+                </button>
                 {% elif conversation.status == 'needs_attention' %}
-                <form method="POST" action="{{ url_for('conversation.close_conversation', conversation_id=conversation.id) }}" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check-circle"></i> 解决并关闭
-                    </button>
-                </form>
+                <button type="button" class="btn btn-success" onclick="showCloseModal()">
+                    <i class="fas fa-check-circle"></i> 解决并关闭
+                </button>
                 {% elif conversation.status == 'closed' %}
                 <form method="POST" action="{{ url_for('conversation.reopen_conversation', conversation_id=conversation.id) }}" style="display: inline;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
@@ -120,5 +114,118 @@
         const chatMessages = document.getElementById('chatMessages');
         chatMessages.scrollTop = chatMessages.scrollHeight;
     });
+
+    function showCloseModal() {
+        const modal = document.getElementById('closeModal');
+        modal.style.display = 'block';
+    }
+
+    function hideCloseModal() {
+        const modal = document.getElementById('closeModal');
+        modal.style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('closeModal');
+        if (event.target == modal) {
+            hideCloseModal();
+        }
+    }
 </script>
+
+<!-- Close Confirmation Modal -->
+<div id="closeModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>关闭会话</h3>
+            <span class="modal-close" onclick="hideCloseModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>确认要关闭此会话吗？</p>
+            <div class="form-group" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" name="generate_faq" id="generateFaq" style="margin-right: 10px; width: 18px; height: 18px;">
+                    <div>
+                        <strong>生成 FAQ</strong>
+                        <p style="margin: 5px 0 0 0; color: #666; font-size: 13px;">
+                            从对话中提取 Q&A 对并录入知识库，形成正向循环
+                        </p>
+                    </div>
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="hideCloseModal()">取消</button>
+            <form method="POST" action="{{ url_for('conversation.close_conversation', conversation_id=conversation.id) }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="generate_faq" id="generateFaqValue" value="off">
+                <button type="submit" class="btn btn-danger" onclick="document.getElementById('generateFaqValue').value = document.getElementById('generateFaq').checked ? 'on' : 'off'">
+                    确认关闭
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.modal-close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    color: #000;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+</style>
 {% endblock %}
