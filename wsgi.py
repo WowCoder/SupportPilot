@@ -18,4 +18,4 @@ app = create_app()
 
 if __name__ == '__main__':
     config = get_config()
-    app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG)
+    app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG)  # Development server on port 5005

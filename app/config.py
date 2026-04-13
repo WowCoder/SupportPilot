@@ -19,7 +19,7 @@ class Config:
     TESTING: bool = False
     DEBUG: bool = False
     HOST: str = '127.0.0.1'
-    PORT: int = 5001
+    PORT: int = 5005
 
     # Database
     SQLALCHEMY_DATABASE_URI: str = 'sqlite:///app.db'

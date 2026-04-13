@@ -295,6 +295,44 @@
                         </p>
                     </div>
 
+                    <!-- Small-to-Big Retrieval Option -->
+                    <div class="form-group mt-4" id="smallToBigGroup">
+                        <label class="form-label">
+                            <i class="fas fa-layer-group"></i> Small-to-Big 检索
+                            <span class="label-hint">（小块索引，大块返回）</span>
+                        </label>
+                        <div class="toggle-option">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="useSmallToBig" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <div class="toggle-desc">
+                                <strong>启用 Small-to-Big 检索策略</strong>
+                                <p>使用小块进行精准检索，返回完整的大块上下文</p>
+                            </div>
+                        </div>
+
+                        <!-- Small-to-Big Parameters -->
+                        <div class="small-to-big-params mt-3" id="smallToBigParams">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">大块大小 (字符)</label>
+                                    <input type="number" id="parentSize" class="form-input" value="2000" min="500" max="5000">
+                                    <p class="form-help">返回给用户的完整上下文块，推荐 2000-3000</p>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">小块大小 (字符)</label>
+                                    <input type="number" id="childSize" class="form-input" value="400" min="100" max="1000">
+                                    <p class="form-help">用于精准检索的索引块，推荐 300-500</p>
+                                </div>
+                            </div>
+                            <p class="form-help mt-2">
+                                <i class="fas fa-lightbulb"></i>
+                                <strong>工作原理：</strong>文档被分成大小两种块，小块索引到向量库用于精准匹配，检索时返回对应的大块以提供完整上下文。
+                            </p>
+                        </div>
+                    </div>
+
                     <button type="button" id="previewChunksBtn" class="btn btn-secondary mt-3">
                         <i class="fas fa-eye"></i> 预览分块效果
                     </button>
@@ -1122,6 +1160,104 @@
         color: var(--color-gray-500);
         font-size: var(--font-size-sm);
     }
+
+    /* Small-to-Big Toggle */
+    .toggle-option {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-3);
+        padding: var(--spacing-3);
+        background-color: var(--color-gray-50);
+        border-radius: var(--radius-lg);
+    }
+
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 28px;
+        flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--color-gray-300);
+        transition: 0.3s;
+        border-radius: 28px;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+        background-color: var(--color-primary);
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(22px);
+    }
+
+    .toggle-desc strong {
+        display: block;
+        color: var(--color-gray-800);
+        margin-bottom: var(--spacing-1);
+    }
+
+    .toggle-desc p {
+        font-size: var(--font-size-sm);
+        color: var(--color-gray-500);
+        margin: 0;
+    }
+
+    .small-to-big-params {
+        padding: var(--spacing-4);
+        background-color: var(--color-primary-bg);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-primary-light);
+    }
+
+    /* Chunk Section Titles */
+    .chunk-section-title {
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-gray-700);
+        padding: var(--spacing-2) var(--spacing-3);
+        background-color: var(--color-gray-100);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--spacing-3);
+    }
+
+    .chunk-section-title i {
+        margin-right: var(--spacing-2);
+        color: var(--color-primary);
+    }
+
+    .parent-chunk {
+        border-left: 4px solid var(--color-success);
+    }
+
+    .child-chunk {
+        border-left: 4px solid var(--color-info);
+    }
 </style>
 {% endblock %}
 
@@ -1142,6 +1278,9 @@ const state = {
         chunkSize: 800,
         chunkOverlap: 100,
         semanticThreshold: 0.5,
+        useSmallToBig: true,
+        parentSize: 2000,
+        childSize: 400,
         previewed: false,
         result: null
     }
@@ -1466,6 +1605,24 @@ if (semanticThresholdSlider) {
     }
 }
 
+// Small-to-Big toggle
+const useSmallToBigCheckbox = $('useSmallToBig');
+const smallToBigParams = $('smallToBigParams');
+
+if (useSmallToBigCheckbox) {
+    useSmallToBigCheckbox.addEventListener('change', function() {
+        state.chunking.useSmallToBig = this.checked;
+        if (smallToBigParams) {
+            smallToBigParams.style.display = this.checked ? 'block' : 'none';
+        }
+    });
+
+    // Initialize display
+    if (smallToBigParams) {
+        smallToBigParams.style.display = useSmallToBigCheckbox.checked ? 'block' : 'none';
+    }
+}
+
 if (previewChunksBtn) {
     previewChunksBtn.addEventListener('click', previewChunks);
 }
@@ -1476,7 +1633,12 @@ async function previewChunks() {
     state.chunking.chunkOverlap = parseInt($('chunkOverlap')?.value) || 300;
     state.chunking.semanticThreshold = parseFloat($('semanticThreshold')?.value) || 0.5;
 
-    console.log('Preview chunks with threshold:', state.chunking.semanticThreshold);
+    // Small-to-Big parameters
+    state.chunking.useSmallToBig = $('useSmallToBig')?.checked ?? true;
+    state.chunking.parentSize = parseInt($('parentSize')?.value) || 2000;
+    state.chunking.childSize = parseInt($('childSize')?.value) || 400;
+
+    console.log('Preview chunks with threshold:', state.chunking.semanticThreshold, 'small_to_big:', state.chunking.useSmallToBig);
 
     const formData = new FormData();
     formData.append('file', state.file);
@@ -1484,6 +1646,9 @@ async function previewChunks() {
     formData.append('chunk_size', state.chunking.chunkSize);
     formData.append('chunk_overlap', state.chunking.chunkOverlap);
     formData.append('semantic_threshold', state.chunking.semanticThreshold);
+    formData.append('use_small_to_big', state.chunking.useSmallToBig);
+    formData.append('parent_size', state.chunking.parentSize);
+    formData.append('child_size', state.chunking.childSize);
 
     try {
         const resp = await fetch('/api/preview-chunks', {
@@ -1498,9 +1663,17 @@ async function previewChunks() {
             state.chunking.result = data;
 
             $('chunkPreviewCard') && ($('chunkPreviewCard').style.display = 'block');
-            $('totalChunks') && ($('totalChunks').textContent = data.total_chunks);
-            $('totalChars') && ($('totalChars').textContent = data.total_chars.toLocaleString());
-            $('avgChunkSize') && ($('avgChunkSize').textContent = data.avg_chunk_size.toLocaleString());
+
+            // Handle Small-to-Big display
+            if (data.use_small_to_big) {
+                $('totalChunks') && ($('totalChunks').textContent = `${data.total_parents} 大块 / ${data.total_children} 小块`);
+                $('totalChars') && ($('totalChars').textContent = data.total_chars?.toLocaleString() || '-');
+                $('avgChunkSize') && ($('avgChunkSize').textContent = `大块 ~${data.parent_chunks?.[0]?.char_count || 2000} / 小块 ~${data.avg_child_size || 400}`);
+            } else {
+                $('totalChunks') && ($('totalChunks').textContent = data.total_chunks);
+                $('totalChars') && ($('totalChars').textContent = data.total_chars.toLocaleString());
+                $('avgChunkSize') && ($('avgChunkSize').textContent = data.avg_chunk_size.toLocaleString());
+            }
 
             // Show used threshold for semantic strategy
             if (state.chunking.strategy === 'semantic' && data.semantic_threshold !== undefined) {
@@ -1520,34 +1693,89 @@ async function previewChunks() {
             // Render chunks
             const chunkList = $('chunkList');
             if (chunkList) {
-                // Show all chunks (or limit to 20 for performance)
-                const displayChunks = data.chunks.slice(0, 20);
-                chunkList.innerHTML = displayChunks.map((c, i) => `
-                    <div class="chunk-item" data-chunk-index="${c.index}">
-                        <div class="chunk-header">
-                            <span><strong>Chunk #${c.index}</strong></span>
-                            <span>${c.char_count} 字符</span>
-                            <button type="button" class="btn btn-sm btn-outline chunk-expand-btn" onclick="toggleChunk(${c.index})">
-                                <i class="fas fa-expand-alt"></i> 展开
-                            </button>
-                        </div>
-                        <div class="chunk-preview" id="chunk-preview-${c.index}">
-                            ${escapeHtml(c.preview)}
-                        </div>
-                        <div class="chunk-full" id="chunk-full-${c.index}" style="display: none;">
-                            ${escapeHtml(c.content)}
-                        </div>
-                    </div>
-                `).join('');
+                // Handle Small-to-Big display
+                if (data.use_small_to_big && data.child_chunks) {
+                    // Show parent chunks first, then child chunks
+                    const displayParents = (data.parent_chunks || []).slice(0, 5);
+                    const displayChildren = (data.child_chunks || []).slice(0, 15);
 
-                // Show total chunks info if there are more
-                if (data.total_chunks > displayChunks.length) {
-                    const infoDiv = document.createElement('div');
-                    infoDiv.className = 'text-center mt-3';
-                    infoDiv.style.color = 'var(--color-gray-500)';
-                    infoDiv.style.fontSize = 'var(--font-size-sm)';
-                    infoDiv.innerHTML = `<i class="fas fa-info-circle"></i> 显示前 ${displayChunks.length} 个分块，共 ${data.total_chunks} 个`;
-                    chunkList.appendChild(infoDiv);
+                    let html = '<div class="chunk-section-title"><i class="fas fa-layer-group"></i> 大块预览（返回给用户）</div>';
+                    html += displayParents.map((c, i) => `
+                        <div class="chunk-item parent-chunk" data-chunk-index="${c.index}">
+                            <div class="chunk-header">
+                                <span><strong>大块 #${c.index}</strong></span>
+                                <span>${c.char_count} 字符</span>
+                                <button type="button" class="btn btn-sm btn-outline chunk-expand-btn" onclick="toggleChunk('parent-${c.index}')">
+                                    <i class="fas fa-expand-alt"></i> 展开
+                                </button>
+                            </div>
+                            <div class="chunk-preview" id="chunk-preview-parent-${c.index}">
+                                ${escapeHtml(c.preview)}
+                            </div>
+                            <div class="chunk-full" id="chunk-full-parent-${c.index}" style="display: none;">
+                                ${escapeHtml(c.content)}
+                            </div>
+                        </div>
+                    `).join('');
+
+                    html += '<div class="chunk-section-title mt-4"><i class="fas fa-puzzle-piece"></i> 小块预览（用于检索）</div>';
+                    html += displayChildren.map((c, i) => `
+                        <div class="chunk-item child-chunk" data-chunk-index="${c.index}">
+                            <div class="chunk-header">
+                                <span><strong>小块 #${c.index}</strong></span>
+                                <span>${c.char_count} 字符</span>
+                                <button type="button" class="btn btn-sm btn-outline chunk-expand-btn" onclick="toggleChunk('child-${c.index}')">
+                                    <i class="fas fa-expand-alt"></i> 展开
+                                </button>
+                            </div>
+                            <div class="chunk-preview" id="chunk-preview-child-${c.index}">
+                                ${escapeHtml(c.preview)}
+                            </div>
+                            <div class="chunk-full" id="chunk-full-child-${c.index}" style="display: none;">
+                                ${escapeHtml(c.content)}
+                            </div>
+                        </div>
+                    `).join('');
+
+                    chunkList.innerHTML = html;
+
+                    if ((data.total_parents || 0) > displayParents.length || (data.total_children || 0) > displayChildren.length) {
+                        const infoDiv = document.createElement('div');
+                        infoDiv.className = 'text-center mt-3';
+                        infoDiv.style.color = 'var(--color-gray-500)';
+                        infoDiv.style.fontSize = 'var(--font-size-sm)';
+                        infoDiv.innerHTML = `<i class="fas fa-info-circle"></i> 显示前 ${displayParents.length} 大块 / ${displayChildren.length} 小块`;
+                        chunkList.appendChild(infoDiv);
+                    }
+                } else {
+                    // Standard chunk display
+                    const displayChunks = (data.chunks || []).slice(0, 20);
+                    chunkList.innerHTML = displayChunks.map((c, i) => `
+                        <div class="chunk-item" data-chunk-index="${c.index}">
+                            <div class="chunk-header">
+                                <span><strong>Chunk #${c.index}</strong></span>
+                                <span>${c.char_count} 字符</span>
+                                <button type="button" class="btn btn-sm btn-outline chunk-expand-btn" onclick="toggleChunk(${c.index})">
+                                    <i class="fas fa-expand-alt"></i> 展开
+                                </button>
+                            </div>
+                            <div class="chunk-preview" id="chunk-preview-${c.index}">
+                                ${escapeHtml(c.preview)}
+                            </div>
+                            <div class="chunk-full" id="chunk-full-${c.index}" style="display: none;">
+                                ${escapeHtml(c.content)}
+                            </div>
+                        </div>
+                    `).join('');
+
+                    if (data.total_chunks > displayChunks.length) {
+                        const infoDiv = document.createElement('div');
+                        infoDiv.className = 'text-center mt-3';
+                        infoDiv.style.color = 'var(--color-gray-500)';
+                        infoDiv.style.fontSize = 'var(--font-size-sm)';
+                        infoDiv.innerHTML = `<i class="fas fa-info-circle"></i> 显示前 ${displayChunks.length} 个分块，共 ${data.total_chunks} 个`;
+                        chunkList.appendChild(infoDiv);
+                    }
                 }
             }
 
@@ -1584,17 +1812,33 @@ function updateConfirmSummary() {
     $('confirmReduction') && ($('confirmReduction').textContent = cleaningResult?.reduction_percent ? cleaningResult.reduction_percent + '%' : '-');
 
     const strategyNames = { semantic: '语义分块', sentence: '句子分块', recursive: '递归分块' };
-    $('confirmStrategy') && ($('confirmStrategy').textContent = strategyNames[state.chunking.strategy] || state.chunking.strategy);
-    $('confirmChunks') && ($('confirmChunks').textContent = state.chunking.result?.total_chunks || '-');
+    let strategyText = strategyNames[state.chunking.strategy] || state.chunking.strategy;
+    if (state.chunking.useSmallToBig) {
+        strategyText += ' + Small-to-Big';
+    }
+    $('confirmStrategy') && ($('confirmStrategy').textContent = strategyText);
+
+    // Display chunks count
+    if (state.chunking.useSmallToBig && state.chunking.result?.total_parents) {
+        $('confirmChunks') && ($('confirmChunks').textContent = `${state.chunking.result.total_parents} 大块 / ${state.chunking.result.total_children} 小块`);
+    } else {
+        $('confirmChunks') && ($('confirmChunks').textContent = state.chunking.result?.total_chunks || '-');
+    }
 }
 
-// ========== Step 4: Upload ==========
+/// ========== Step 4: Upload ==========
 if (startUploadBtn) {
     startUploadBtn.addEventListener('click', startUpload);
 }
 
 async function startUpload() {
-    if (!state.file) return;
+    console.log('startUpload called, state.file:', state.file);
+
+    if (!state.file) {
+        flashMessage('danger', '请先选择文件');
+        console.error('No file in state');
+        return;
+    }
 
     $('uploadProgress') && ($('uploadProgress').style.display = 'block');
     $('progressTitle') && ($('progressTitle').textContent = '正在上传...');
@@ -1609,6 +1853,18 @@ async function startUpload() {
     formData.append('chunk_overlap', state.chunking.chunkOverlap);
     formData.append('semantic_threshold', state.chunking.semanticThreshold);
 
+    // Small-to-Big parameters
+    formData.append('use_small_to_big', state.chunking.useSmallToBig);
+    formData.append('parent_size', state.chunking.parentSize);
+    formData.append('child_size', state.chunking.childSize);
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+                      document.querySelector('[name="csrf_token"]')?.value || '';
+    if (csrfToken) {
+        formData.append('csrf_token', csrfToken);
+    }
+
     try {
         $('progressFill') && ($('progressFill').style.width = '60%');
         $('progressTitle') && ($('progressTitle').textContent = '正在处理...');
@@ -1618,7 +1874,20 @@ async function startUpload() {
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: formData
         });
-        const data = await resp.json();
+
+        // Try to parse JSON response
+        let data;
+        try {
+            data = await resp.json();
+        } catch (parseErr) {
+            console.error('Failed to parse response:', parseErr);
+            throw new Error('服务器响应格式错误');
+        }
+
+        if (!resp.ok) {
+            console.error('Upload failed:', resp.status, data);
+            throw new Error(data?.message || data?.error || `上传失败 (${resp.status})`);
+        }
 
         if (data.success) {
             $('progressFill') && ($('progressFill').style.width = '100%');
@@ -1637,14 +1906,10 @@ async function startUpload() {
                     totalChunks.textContent = current + (data.chunks_added || 0);
                 }
             }, 500);
-        } else {
-            flashMessage('danger', data.message || '上传失败');
-            $('uploadProgress') && ($('uploadProgress').style.display = 'none');
-            startUploadBtn.disabled = false;
         }
     } catch (err) {
         console.error('Upload error:', err);
-        flashMessage('danger', '上传失败');
+        flashMessage('danger', err.message || '上传失败');
         $('uploadProgress') && ($('uploadProgress').style.display = 'none');
         startUploadBtn.disabled = false;
     }

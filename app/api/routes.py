@@ -44,20 +44,30 @@ def test_query():
     query = data.get('query', '').strip()
     k = int(data.get('k', 3))
     similarity_threshold = float(data.get('similarity_threshold', 0.1))
+    use_small_to_big = data.get('use_small_to_big', False)
 
     if not query:
         logger.error(f'Test query failed: empty query, data={data}')
         return jsonify({'success': False, 'message': 'Query is required'}), 400
 
     try:
-        results = rag_utils.retrieve_relevant_info(query, k=k, similarity_threshold=similarity_threshold)
+        # 使用 Small-to-Big 检索（如果启用）
+        if use_small_to_big:
+            results = rag_utils.retrieve_with_parent(query, k=k, similarity_threshold=similarity_threshold)
+            retrieval_mode = 'small_to_big'
+        else:
+            results = rag_utils.retrieve_relevant_info(query, k=k, similarity_threshold=similarity_threshold)
+            retrieval_mode = 'standard'
+
         return jsonify({
             'success': True,
+            'retrieval_mode': retrieval_mode,
             'results': [
                 {
                     'content': r['content'],
                     'similarity': r['similarity'],
-                    'source': r['source']
+                    'source': r['source'],
+                    'parent_id': r.get('parent_id')  # Small-to-Big 模式有 parent_id
                 }
                 for r in results
             ]
@@ -84,7 +94,12 @@ def preview_chunks():
     chunk_overlap = int(request.form.get('chunk_overlap', 300))
     semantic_threshold = float(request.form.get('semantic_threshold', 0.5))
 
-    logger.info(f'Preview chunks request: strategy={strategy}, semantic_threshold={semantic_threshold}')
+    # Small-to-Big 参数
+    use_small_to_big = request.form.get('use_small_to_big', 'false').lower() == 'true'
+    parent_size = int(request.form.get('parent_size', 2000))
+    child_size = int(request.form.get('child_size', 400))
+
+    logger.info(f'Preview chunks request: strategy={strategy}, semantic_threshold={semantic_threshold}, small_to_big={use_small_to_big}')
 
     # Validate file extension
     ext = os.path.splitext(file.filename)[1].lower()
@@ -103,7 +118,10 @@ def preview_chunks():
             strategy=strategy,
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
-            semantic_threshold=semantic_threshold
+            semantic_threshold=semantic_threshold,
+            use_small_to_big=use_small_to_big,
+            parent_size=parent_size,
+            child_size=child_size
         )
 
         # Clean up temporary file

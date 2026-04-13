@@ -1,10 +1,21 @@
+# Disable CoreML for ONNX Runtime (fixes macOS CoreML errors)
+# MUST be set BEFORE importing any ONNX/chromadb modules
+import os
+os.environ['ORT_DISABLE_COREML'] = '1'
+os.environ['ONNXRUNTIME_DISABLE_CPU'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = ''  # Force CPU only
+os.environ['OMP_NUM_THREADS'] = '1'
+
+# Set offline mode BEFORE importing huggingface modules
+os.environ['HF_HUB_OFFLINE'] = '1'
+os.environ['SENTENCE_TRANSFORMERS_HOME'] = os.path.expanduser("~/.cache/huggingface/hub")
+
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_experimental.text_splitter import SemanticChunker
 from sentence_transformers import CrossEncoder
 import pdfplumber
-import os
 import logging
 import hashlib
 import threading
@@ -13,15 +24,9 @@ from chromadb.config import Settings
 from rank_bm25 import BM25Okapi
 import re
 from collections import Counter
+import uuid
 
-# Disable CoreML for ONNX Runtime (fixes macOS CoreML errors)
-os.environ['ORT_DISABLE_COREML'] = '1'
-os.environ['ONNXRUNTIME_DISABLE_CPU'] = '0'
-os.environ['CUDA_VISIBLE_DEVICES'] = ''  # Force CPU only
-
-# Set offline mode BEFORE importing huggingface modules
-os.environ['HF_HUB_OFFLINE'] = '1'
-os.environ['SENTENCE_TRANSFORMERS_HOME'] = os.path.expanduser("~/.cache/huggingface/hub")
+from rag.parent_store import parent_store
 
 logger = logging.getLogger(__name__)
 
@@ -77,17 +82,24 @@ class RAGUtils:
         # Lazy init for embedding - only when needed
         self._embedding_initialized = False
 
-        # Get collection without embedding function initially
+        # Get or create embedding function first
+        embedding_fn = self._get_embedding_fn()
+
+        # Get collection with our custom embedding function
         try:
-            self.collection = self.client.get_collection(name="knowledge")
+            self.collection = self.client.get_collection(
+                name="knowledge",
+                embedding_function=embedding_fn
+            )
             logger.info('Found existing Chroma collection')
         except ValueError:
-            # Collection doesn't exist, create it without embedding function
+            # Collection doesn't exist, create it with our embedding function
             self.collection = self.client.create_collection(
                 name="knowledge",
+                embedding_function=embedding_fn,
                 metadata={"hnsw:space": "cosine"}
             )
-            logger.info('Created new Chroma collection')
+            logger.info('Created new Chroma collection with custom embedding function')
 
         # Track processed document hashes for deduplication (after collection init)
         self.document_hashes = set()
@@ -105,12 +117,13 @@ class RAGUtils:
         self._cross_encoder_ready = False
 
     def _get_embedding_fn(self):
-        """Lazy initialization of embedding function"""
-        if self._embedding_initialized:
+        """Get or initialize the embedding function"""
+        # Always return if already initialized
+        if self._embedding_initialized and self._embedding_fn is not None:
             return self._embedding_fn
 
-        with self._embedding_lock:
-            if self._embedding_initialized:
+        with RAGUtils._embedding_lock:
+            if self._embedding_initialized and self._embedding_fn is not None:
                 return self._embedding_fn
 
             try:
@@ -429,7 +442,102 @@ class RAGUtils:
         logger.info(f'Sentence chunking produced {len(chunks)} chunks')
         return chunks
 
-    def process_document(self, file_path, strategy='semantic', chunk_size=1500, chunk_overlap=300, semantic_threshold=0.5):
+    def _create_parent_child_chunks(self, documents, parent_size=2000, child_size=400):
+        """创建父子文档对（Small-to-Big 检索策略）
+
+        将文档分成大小两种块：
+        - 大块（parent）：存储到 ParentDocumentStore，用于返回完整上下文
+        - 小块（child）：索引到 ChromaDB，用于精准检索
+
+        Args:
+            documents: 原始文档列表（LangChain Document 对象）
+            parent_size: 大块大小（字符数），默认 2000
+            child_size: 小块大小（字符数），默认 400
+
+        Returns:
+            dict: {
+                'parent_chunks': [{'id': str, 'content': str, 'metadata': dict}],
+                'child_chunks': [{'id': str, 'content': str, 'metadata': dict, 'parent_id': str}],
+                'mapping': {child_id -> parent_id}
+            }
+        """
+        parent_chunks = []
+        child_chunks = []
+        mapping = {}
+
+        # 创建大块分割器
+        parent_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=parent_size,
+            chunk_overlap=min(200, parent_size // 10),  # 10% overlap
+            length_function=len,
+            separators=["\n\n", "\n", ". ", " ", ""]
+        )
+
+        # 创建小块分割器
+        child_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=child_size,
+            chunk_overlap=min(50, child_size // 8),  # 12.5% overlap
+            length_function=len,
+            separators=["\n", ". ", " ", ""]
+        )
+
+        # 为每个文档创建父子块
+        for doc_idx, document in enumerate(documents):
+            source = document.metadata.get('source', 'unknown')
+            page = document.metadata.get('page', 0)
+
+            # 生成大块
+            parent_docs = parent_splitter.split_documents([document])
+
+            for parent_idx, parent_doc in enumerate(parent_docs):
+                parent_id = f"parent_{doc_idx}_{parent_idx}_{uuid.uuid4().hex[:8]}"
+                parent_content = parent_doc.page_content
+
+                # 存储大块信息
+                parent_chunks.append({
+                    'id': parent_id,
+                    'content': parent_content,
+                    'metadata': {
+                        'source': source,
+                        'page': page,
+                        'parent_idx': parent_idx
+                    }
+                })
+
+                # 对每个大块分割成小块
+                child_docs = child_splitter.split_documents([parent_doc])
+
+                for child_idx, child_doc in enumerate(child_docs):
+                    child_id = f"child_{doc_idx}_{parent_idx}_{child_idx}_{uuid.uuid4().hex[:8]}"
+                    child_content = child_doc.page_content
+
+                    # 如果小块太短，跳过（通常是边缘情况）
+                    if len(child_content) < 20:
+                        continue
+
+                    # 存储小块信息，包含 parent_id
+                    child_chunks.append({
+                        'id': child_id,
+                        'content': child_content,
+                        'metadata': {
+                            'source': source,
+                            'page': page,
+                            'parent_id': parent_id,  # 关键：关联大块
+                            'child_idx': child_idx
+                        }
+                    })
+
+                    mapping[child_id] = parent_id
+
+        logger.info(f'Parent-child chunking: {len(parent_chunks)} parents, {len(child_chunks)} children')
+        return {
+            'parent_chunks': parent_chunks,
+            'child_chunks': child_chunks,
+            'mapping': mapping
+        }
+
+    def process_document(self, file_path, strategy='semantic', chunk_size=1500, chunk_overlap=300, semantic_threshold=0.5,
+                         use_small_to_big=False, parent_size=2000, child_size=400):
         """Process a document and add it to the Chroma collection (thread-safe)
 
         Args:
@@ -441,6 +549,9 @@ class RAGUtils:
             chunk_size: Size of each chunk in characters (for recursive strategy)
             chunk_overlap: Overlap between consecutive chunks (for recursive strategy)
             semantic_threshold: Breakpoint threshold for semantic chunking (0.1-0.9)
+            use_small_to_big: Enable Small-to-Big retrieval (small chunks indexed, large chunks returned)
+            parent_size: Large chunk size for Small-to-Big (default 2000 chars)
+            child_size: Small chunk size for Small-to-Big (default 400 chars)
 
         Returns:
             dict: {
@@ -448,6 +559,7 @@ class RAGUtils:
                 'chunks_added': int,
                 'chunks_total': int,
                 'strategy': str,
+                'use_small_to_big': bool,
                 'error': str (if failed)
             }
         """
@@ -515,13 +627,49 @@ class RAGUtils:
                     return {'success': False, 'chunks_added': 0, 'error': 'Unsupported file type'}
 
                 # Choose chunking strategy
-                logger.info(f'Using chunking strategy: {strategy}')
-                if strategy == 'semantic':
+                logger.info(f'Using chunking strategy: {strategy}, small_to_big: {use_small_to_big}')
+
+                if use_small_to_big:
+                    # Small-to-Big 模式：创建父子文档对
+                    chunk_result = self._create_parent_child_chunks(
+                        documents,
+                        parent_size=parent_size,
+                        child_size=child_size
+                    )
+
+                    parent_chunks = chunk_result['parent_chunks']
+                    child_chunks = chunk_result['child_chunks']
+
+                    # 存储大块到 ParentDocumentStore
+                    for parent in parent_chunks:
+                        parent_store.put(
+                            doc_id=parent['id'],
+                            content=parent['content'],
+                            metadata=parent['metadata']
+                        )
+
+                    logger.info(f'Stored {len(parent_chunks)} parent chunks to ParentDocumentStore')
+
+                    # 使用小块作为 chunks（后续存入 ChromaDB）
+                    # 创建 Document 对象格式
+                    chunks = [
+                        type('obj', (object,), {
+                            'page_content': c['content'],
+                            'metadata': c['metadata']
+                        })()
+                        for c in child_chunks
+                    ]
+                    chunks_total = len(chunks)
+                    child_ids_map = {c['id']: c['metadata'].get('parent_id') for c in child_chunks}
+
+                elif strategy == 'semantic':
                     # Semantic chunking - best quality, may be slower
                     chunks = self._semantic_chunk(documents, threshold=semantic_threshold)
+                    chunks_total = len(chunks)
                 elif strategy == 'sentence':
                     # Sentence-level chunking - good quality fallback
                     chunks = self._sentence_chunk(documents, max_chunk_size=chunk_size)
+                    chunks_total = len(chunks)
                 else:
                     # Recursive chunking - traditional fixed-size (fastest)
                     text_splitter = RecursiveCharacterTextSplitter(
@@ -530,9 +678,9 @@ class RAGUtils:
                         length_function=len
                     )
                     chunks = text_splitter.split_documents(documents)
+                    chunks_total = len(chunks)
 
-                chunks_total = len(chunks)
-                logger.info(f'Split document into {chunks_total} chunks using {strategy} strategy')
+                logger.info(f'Split document into {chunks_total} chunks')
 
                 # Filter low-quality chunks (P4: quality scoring)
                 filtered_chunks = []
@@ -561,14 +709,30 @@ class RAGUtils:
                     if content_hash not in self.document_hashes:
                         self.document_hashes.add(content_hash)
                         documents_to_add.append(content)
-                        doc_id = f"{os.path.basename(file_path)}_{len(self.document_hashes)}"
+
+                        # 对于 small_to_big，使用预生成的 ID；否则使用默认 ID
+                        if use_small_to_big:
+                            doc_id = child_chunks[i]['id']
+                        else:
+                            doc_id = f"{os.path.basename(file_path)}_{len(self.document_hashes)}"
+
                         ids_to_add.append(doc_id)
-                        metadatas_to_add.append({
+
+                        # 构建元数据，包含 parent_id（small_to_big 模式）
+                        metadata = {
                             "source": os.path.basename(file_path),
                             "filepath": file_path,
                             "content_hash": content_hash,
                             "page": chunk.metadata.get('page', 0) if hasattr(chunk, 'metadata') else 0
-                        })
+                        }
+
+                        # Small-to-Big 模式添加 parent_id
+                        if use_small_to_big and hasattr(chunk, 'metadata'):
+                            parent_id = chunk.metadata.get('parent_id')
+                            if parent_id:
+                                metadata["parent_id"] = parent_id
+
+                        metadatas_to_add.append(metadata)
                         new_chunks += 1
 
                 if new_chunks > 0 and documents_to_add:
@@ -597,6 +761,9 @@ class RAGUtils:
                     'chunks_added': new_chunks,
                     'chunks_total': chunks_total,
                     'strategy': strategy,
+                    'use_small_to_big': use_small_to_big,
+                    'parent_chunks': len(parent_chunks) if use_small_to_big else 0,
+                    'child_chunks': len(child_chunks) if use_small_to_big else 0,
                     'is_duplicate': new_chunks == 0 and chunks_total > 0
                 }
 
@@ -885,6 +1052,90 @@ class RAGUtils:
 
         return results
 
+    def retrieve_with_parent(self, query, k=3, similarity_threshold=0.25, use_expansion=True, use_reranking=True):
+        """Small-to-Big 检索：小块检索，返回大块
+
+        1. 用小块做向量检索（高精度）
+        2. 获取匹配小块的 parent_id
+        3. 从 ParentDocumentStore 获取大块
+        4. 返回大块内容（完整上下文）
+
+        Args:
+            query: 搜索查询
+            k: 返回结果数量
+            similarity_threshold: 最低相似度阈值
+            use_expansion: 是否使用查询扩展
+            use_reranking: 是否使用 Cross-Encoder 重排序
+
+        Returns:
+            List: [{'content': str, 'similarity': float, 'source': str, 'parent_id': str}]
+        """
+        # 获取更多候选结果用于重排序
+        retrieve_k = k * 3 if use_reranking else k
+
+        try:
+            queries_to_search = [query]
+            if use_expansion:
+                queries_to_search = self._expand_query(query)
+                logger.debug(f'Query expansion for Small-to-Big: {query} -> {queries_to_search}')
+
+            all_results = []
+            seen_parent_ids = set()  # 去重：同一大块只返回一次
+
+            for search_query in queries_to_search:
+                results = self.collection.query(
+                    query_texts=[search_query],
+                    n_results=retrieve_k,
+                    include=["documents", "distances", "metadatas"]
+                )
+
+                if results and results.get('documents') and results['documents'][0]:
+                    for doc, distance, meta in zip(
+                        results['documents'][0],
+                        results['distances'][0],
+                        results['metadatas'][0]
+                    ):
+                        similarity = 1 - distance
+
+                        # 只处理有 parent_id 的结果（Small-to-Big 模式）
+                        parent_id = meta.get('parent_id') if meta else None
+                        if not parent_id:
+                            # 如果没有 parent_id，说明不是 small_to_big 模式，跳过
+                            continue
+
+                        if similarity >= similarity_threshold and parent_id not in seen_parent_ids:
+                            seen_parent_ids.add(parent_id)
+
+                            # 从 ParentDocumentStore 获取大块
+                            parent_doc = parent_store.get(parent_id)
+                            if parent_doc:
+                                all_results.append({
+                                    'content': parent_doc['content'],  # 返回大块内容
+                                    'similarity': float(similarity),
+                                    'source': parent_doc['metadata'].get('source', 'unknown'),
+                                    'parent_id': parent_id,
+                                    'child_content': doc  # 原始小块内容（用于调试）
+                                })
+
+            all_results.sort(key=lambda x: x['similarity'], reverse=True)
+
+            # Cross-Encoder 重排序（使用大块内容）
+            if use_reranking and all_results and len(all_results) > k:
+                all_results = self._rerank_with_cross_encoder(query, all_results, k)
+            else:
+                all_results = all_results[:k]
+
+            if all_results:
+                logger.info(f'Small-to-Big retrieved {len(all_results)} parent chunks for query: {query[:50]}...')
+            else:
+                logger.info(f'No parent chunks found for query: {query[:50]}...')
+
+            return all_results
+
+        except Exception as e:
+            logger.error(f'Error in Small-to-Big retrieval: {e}', exc_info=True)
+            return []
+
     def get_document_count(self):
         """Get total number of document chunks in the collection"""
         try:
@@ -893,7 +1144,8 @@ class RAGUtils:
             logger.error(f'Error getting document count: {e}', exc_info=True)
             return 0
 
-    def preview_chunks(self, file_path, strategy='semantic', chunk_size=1500, chunk_overlap=300, semantic_threshold=0.5):
+    def preview_chunks(self, file_path, strategy='semantic', chunk_size=1500, chunk_overlap=300, semantic_threshold=0.5,
+                        use_small_to_big=False, parent_size=2000, child_size=400):
         """Preview document chunking without saving to knowledge base
 
         Args:
@@ -902,15 +1154,21 @@ class RAGUtils:
             chunk_size: Size of each chunk in characters (for recursive/sentence strategy)
             chunk_overlap: Overlap between consecutive chunks (for recursive strategy)
             semantic_threshold: Breakpoint threshold for semantic chunking (0.1-0.9)
+            use_small_to_big: Enable Small-to-Big preview
+            parent_size: Large chunk size for Small-to-Big preview
+            child_size: Small chunk size for Small-to-Big preview
 
         Returns:
             dict: {
                 'success': bool,
                 'strategy': str,
+                'use_small_to_big': bool,
                 'total_chunks': int,
                 'total_chars': int,
                 'avg_chunk_size': int,
                 'chunks': [{'index': int, 'content': str, 'char_count': int, 'preview': str}],
+                'parent_chunks': list (if use_small_to_big),
+                'child_chunks': list (if use_small_to_big),
                 'error': str (if failed)
             }
         """
@@ -954,8 +1212,65 @@ class RAGUtils:
                 return {'success': False, 'error': 'Unsupported file type'}
 
             # Apply chunking strategy
-            logger.info(f'Previewing chunks with strategy: {strategy}, semantic_threshold: {semantic_threshold}')
-            if strategy == 'semantic':
+            logger.info(f'Previewing chunks with strategy: {strategy}, semantic_threshold: {semantic_threshold}, small_to_big: {use_small_to_big}')
+
+            if use_small_to_big:
+                # Small-to-Big 模式：预览父子文档对
+                chunk_result = self._create_parent_child_chunks(
+                    documents,
+                    parent_size=parent_size,
+                    child_size=child_size
+                )
+
+                parent_chunks = chunk_result['parent_chunks']
+                child_chunks = chunk_result['child_chunks']
+
+                # 格式化大块预览
+                parent_preview = []
+                for i, parent in enumerate(parent_chunks, 1):
+                    content = parent['content']
+                    preview_text = content[:300] + '...' if len(content) > 300 else content
+                    parent_preview.append({
+                        'index': i,
+                        'id': parent['id'],
+                        'content': content,
+                        'char_count': len(content),
+                        'preview': preview_text,
+                        'page': parent['metadata'].get('page', 0)
+                    })
+
+                # 格式化小块预览
+                child_preview = []
+                for i, child in enumerate(child_chunks, 1):
+                    content = child['content']
+                    preview_text = content[:150] + '...' if len(content) > 150 else content
+                    child_preview.append({
+                        'index': i,
+                        'id': child['id'],
+                        'content': content,
+                        'char_count': len(content),
+                        'preview': preview_text,
+                        'parent_id': child['metadata'].get('parent_id'),
+                        'page': child['metadata'].get('page', 0)
+                    })
+
+                return {
+                    'success': True,
+                    'strategy': strategy,
+                    'use_small_to_big': True,
+                    'parent_size': parent_size,
+                    'child_size': child_size,
+                    'total_parents': len(parent_chunks),
+                    'total_children': len(child_chunks),
+                    'total_chars': sum(len(c['content']) for c in child_chunks),
+                    'avg_child_size': sum(len(c['content']) for c in child_chunks) // len(child_chunks) if child_chunks else 0,
+                    'parent_chunks': parent_preview[:10],  # 只显示前10个大块
+                    'child_chunks': child_preview[:20],  # 只显示前20个小块
+                    'all_parent_chunks': parent_preview,
+                    'all_child_chunks': child_preview
+                }
+
+            elif strategy == 'semantic':
                 chunks = self._semantic_chunk(documents, threshold=semantic_threshold)
                 logger.info(f'Semantic chunking result: {len(chunks)} chunks')
             elif strategy == 'sentence':
@@ -972,11 +1287,11 @@ class RAGUtils:
             total_chars = sum(len(c.page_content) for c in chunks)
             avg_chunk_size = total_chars // len(chunks) if chunks else 0
 
-            preview_chunks = []
+            preview_chunks_list = []
             for i, chunk in enumerate(chunks, 1):
                 content = chunk.page_content
                 preview_text = content[:200] + '...' if len(content) > 200 else content
-                preview_chunks.append({
+                preview_chunks_list.append({
                     'index': i,
                     'content': content,
                     'char_count': len(content),
@@ -987,11 +1302,12 @@ class RAGUtils:
             return {
                 'success': True,
                 'strategy': strategy,
+                'use_small_to_big': False,
                 'semantic_threshold': semantic_threshold,
                 'total_chunks': len(chunks),
                 'total_chars': total_chars,
                 'avg_chunk_size': avg_chunk_size,
-                'chunks': preview_chunks
+                'chunks': preview_chunks_list
             }
 
         except Exception as e:
@@ -999,7 +1315,7 @@ class RAGUtils:
             return {'success': False, 'error': str(e)}
 
     def delete_documents_by_source(self, filename):
-        """Delete all chunks from a specific source file"""
+        """Delete all chunks from a specific source file (including parent documents)"""
         try:
             existing = self.collection.get(
                 where={"source": filename},
@@ -1015,7 +1331,9 @@ class RAGUtils:
                 if self._bm25_initialized:
                     self._build_bm25_index()
 
-                logger.info(f'Deleted documents from source: {filename}')
+                # 同步删除 ParentDocumentStore 中的大块
+                parent_deleted = parent_store.delete_by_source(filename)
+                logger.info(f'Deleted documents from source: {filename} (parent_docs: {parent_deleted})')
                 return True
 
             return False

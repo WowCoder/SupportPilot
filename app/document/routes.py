@@ -77,15 +77,17 @@ def upload():
 
     if request.method == 'POST':
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        logger.info(f'Upload request received, is_ajax={is_ajax}, files={list(request.files.keys())}')
 
         if 'file' not in request.files:
             logger.warning('Upload failed: no file part')
             if is_ajax:
-                return jsonify({'success': False, 'message': 'No file part'})
+                return jsonify({'success': False, 'message': 'No file part'}), 400
             flash('No file part')
             return redirect(request.url)
 
         file = request.files['file']
+        logger.info(f'File received: {file.filename}')
         if file.filename == '':
             logger.warning('Upload failed: no selected file')
             if is_ajax:
@@ -106,6 +108,11 @@ def upload():
                 strategy = request.form.get('strategy', 'semantic', type=str)
                 semantic_threshold = request.form.get('semantic_threshold', 0.5, type=float)
 
+                # Small-to-Big 参数
+                use_small_to_big = request.form.get('use_small_to_big', 'false').lower() == 'true'
+                parent_size = request.form.get('parent_size', 2000, type=int)
+                child_size = request.form.get('child_size', 400, type=int)
+
                 # Validate strategy parameter
                 valid_strategies = ['semantic', 'sentence', 'recursive']
                 if strategy not in valid_strategies:
@@ -115,8 +122,19 @@ def upload():
                 if semantic_threshold < 0.1 or semantic_threshold > 0.9:
                     semantic_threshold = 0.5  # Default
 
+                # Validate small_to_big parameters
+                if parent_size < 500 or parent_size > 5000:
+                    parent_size = 2000  # Default
+                if child_size < 100 or child_size > 1000:
+                    child_size = 400  # Default
+
                 # Process document for RAG
-                result = rag_utils.process_document(filepath, strategy, chunk_size, chunk_overlap, semantic_threshold)
+                result = rag_utils.process_document(
+                    filepath, strategy, chunk_size, chunk_overlap, semantic_threshold,
+                    use_small_to_big=use_small_to_big,
+                    parent_size=parent_size,
+                    child_size=child_size
+                )
 
                 if result.get('success'):
                     # Add to database
@@ -133,17 +151,28 @@ def upload():
                     chunks_total = result.get('chunks_total', 0)
                     is_duplicate = result.get('is_duplicate', False)
                     used_strategy = result.get('strategy', strategy)
+                    used_small_to_big = result.get('use_small_to_big', False)
+                    parent_chunks = result.get('parent_chunks', 0)
+                    child_chunks = result.get('child_chunks', 0)
 
                     if is_ajax:
-                        return jsonify({
+                        response = {
                             'success': True,
                             'message': f'文件 "{filename}" 上传并处理成功',
                             'chunks_added': chunks_added,
                             'chunks_total': chunks_total,
                             'strategy': used_strategy,
-                            'is_duplicate': is_duplicate
-                        })
-                    flash(f'File uploaded and processed successfully ({chunks_added} chunks added using {used_strategy} strategy)')
+                            'is_duplicate': is_duplicate,
+                            'use_small_to_big': used_small_to_big
+                        }
+                        if used_small_to_big:
+                            response['parent_chunks'] = parent_chunks
+                            response['child_chunks'] = child_chunks
+                        return jsonify(response)
+                    if used_small_to_big:
+                        flash(f'File uploaded successfully ({parent_chunks} parent chunks, {child_chunks} child chunks using Small-to-Big)')
+                    else:
+                        flash(f'File uploaded and processed successfully ({chunks_added} chunks added using {used_strategy} strategy)')
                     return redirect(url_for('document.upload'))
                 else:
                     error_msg = result.get('error', 'Unknown error')
