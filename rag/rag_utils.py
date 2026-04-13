@@ -12,7 +12,7 @@ os.environ['SENTENCE_TRANSFORMERS_HOME'] = os.path.expanduser("~/.cache/huggingf
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_experimental.text_splitter import SemanticChunker
 from sentence_transformers import CrossEncoder
 import pdfplumber
@@ -41,12 +41,10 @@ class CustomEmbeddingFunction:
             self.embeddings = HuggingFaceEmbeddings(
                 model_name=model_name,
                 model_kwargs={
-                    'device': 'cpu',
-                    'show_progress': False
+                    'device': 'cpu'
                 },
                 encode_kwargs={
-                    'normalize_embeddings': True,
-                    'show_progress_bar': False
+                    'normalize_embeddings': True
                 }
             )
             logger.info('Loaded HuggingFaceEmbeddings successfully from local cache')
