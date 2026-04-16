@@ -10,6 +10,7 @@ SupportPilot 是一个基于 Flask 的智能客户支持系统，使用了 RAG (
 - **数据库**：SQLite (开发) / PostgreSQL (生产)
 - **认证**：Flask-Login
 - **RAG 技术**：LangChain + Chroma + SentenceTransformer + SemanticChunker
+- **Agentic RAG**: LangGraph 状态机编排
 - **API**：Alibaba Qwen API
 - **前端**：HTML 模板
 - **生产服务器**：Gunicorn
@@ -47,7 +48,32 @@ SupportPilot/
 ├── api/                 # API 客户端（保留）
 │   └── qwen_api.py      # Alibaba Qwen API 客户端
 ├── rag/                 # RAG 相关
-│   └── rag_utils.py     # RAG 功能实现
+│   ├── core/            # 核心模块（Agentic RAG）
+│   │   ├── tool.py          # 工具基类
+│   │   ├── container.py     # 依赖注入容器
+│   │   ├── config.py        # YAML 配置加载器
+│   │   └── observability.py # 日志和指标采集
+│   ├── tools/           # 检索工具（Agentic RAG）
+│   │   ├── vector_tool.py     # 向量检索工具
+│   │   ├── bm25_tool.py       # BM25 关键词检索
+│   │   ├── filter_tool.py     # 元数据过滤工具
+│   │   ├── ensemble_tool.py   # 多路召回融合 (RRF)
+│   │   └── parent_store.py    # Small-to-Big 大块存储
+│   ├── agents/          # Agent 模块（Agentic RAG）
+│   │   ├── states.py          # Agent 状态定义
+│   │   ├── router.py          # 查询路由器
+│   │   ├── router_rules.py    # 规则匹配器
+│   │   ├── router_classifier.py # ML 意图分类器
+│   │   ├── retrieval_agent.py # LangGraph 状态机
+│   │   └── nodes/             # 状态机节点
+│   │       ├── query_understanding.py  # 查询理解
+│   │       ├── planning.py             # 检索规划
+│   │       ├── tool_execution.py       # 工具调用
+│   │       └── synthesis.py            # 结果合成
+│   ├── service.py         # RAG 服务兼容层
+│   └── rag_utils.py       # 文档处理工具（保留用于 ingestion）
+├── config/              # 配置文件
+│   └── rag_config.yaml  # Agentic RAG 配置
 ├── templates/           # HTML 模板
 │   ├── conversation.html
 │   ├── login.html
@@ -294,6 +320,87 @@ RRF Score = α / (rank_bm25 + 60) + (1-α) / (rank_vector + 60)
 6. **查询扩展**: 同义词替换提升召回率
 7. **线程安全**: 使用 `threading.Lock` 保护并发写入
 8. **错误处理**: 完善的异常处理和降级策略
+
+## Agentic RAG 架构 (新一代检索系统)
+
+### 架构概览
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    User Query                                │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Query Router                               │
+│  - Rules: keywords, patterns                                │
+│  - ML: Logistic Regression (optional)                       │
+│  - Modes: simple | agentic | auto                           │
+└─────────────┬───────────────────────────────────────────────┘
+              │
+     ┌────────┴────────┐
+     │                 │
+     ▼                 ▼
+┌─────────┐      ┌─────────────────────────────────────────┐
+│ Simple  │      │           Agentic Path                  │
+│ Path    │      │  LangGraph State Machine:               │
+│ (vector │      │  query_understanding → planning →       │
+│  search)│      │  tool_execution → synthesis             │
+└─────────┘      └─────────────────────────────────────────┘
+     │                            │
+     └────────────┬───────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Retrieval Tools                                 │
+│  - vector_search: Vector similarity search                  │
+│  - bm25_search: BM25 keyword search                         │
+│  - metadata_filter: Metadata filtering                      │
+│  - ensemble_retrieval: RRF fusion                           │
+└─────────────────────────────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│           Small-to-Big Retrieval                             │
+│  - Small chunks (400 chars) indexed in ChromaDB             │
+│  - Large chunks (2000 chars) stored in ParentDocumentStore  │
+│  - Search small → return large for complete context         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 核心组件
+
+| 组件 | 位置 | 功能 |
+|------|------|------|
+| Query Router | `rag/agents/router.py` | 查询路由（simple/agentic/auto） |
+| Retrieval Agent | `rag/agents/retrieval_agent.py` | LangGraph 状态机编排 |
+| Query Understanding | `rag/agents/nodes/query_understanding.py` | 查询改写（代词解析、省略补全） |
+| Planning | `rag/agents/nodes/planning.py` | 检索规划、工具选择 |
+| Tool Execution | `rag/agents/nodes/tool_execution.py` | 工具调用、结果收集 |
+| Synthesis | `rag/agents/nodes/synthesis.py` | 生成最终答案 |
+
+### 使用示例
+
+```python
+# 简单检索（自动路由）
+from rag.service import rag_service
+
+results = rag_service.retrieve(
+    query="高并发的原则是什么",
+    k=5,
+    use_small_to_big=True
+)
+
+# Agentic 检索（多步推理）
+from rag.agents.retrieval_agent import retrieval_agent
+
+result = retrieval_agent.run(
+    query="对比 A 和 B 的异同",
+    session_id="conversation_123"
+)
+```
+
+详细架构文档请参考：[rag/README.md](rag/README.md)
 
 ## 快速开始
 

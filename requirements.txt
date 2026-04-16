@@ -21,6 +21,7 @@ langchain-core>=1.0.0
 langchain-huggingface>=0.1.0
 langchain-experimental>=0.0.50  # For SemanticChunker
 langchain-text-splitters>=0.3.0  # Text splitting utilities
+langgraph>=1.1.0  # Agent state machine orchestration (latest stable 1.1.6 as of Apr 2026)
 chromadb>=0.4.22
 sentence-transformers>=2.3.1,<3.0.0  # Compatible with PyTorch 2.2.x
 pypdf>=3.17.0  # PDF processing

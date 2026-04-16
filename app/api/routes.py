@@ -9,7 +9,7 @@ import logging
 import os
 import tempfile
 
-from rag.rag_utils import rag_utils
+from rag.service import rag_service
 from rag.cleaning import document_cleaner, CleaningOptions
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 def get_document_count():
     """Get total document count in RAG system"""
     try:
-        count = rag_utils.get_document_count()
+        count = rag_service.get_document_count()
         return jsonify({'success': True, 'count': count})
     except Exception as e:
         logger.error(f'Error getting document count: {e}')
@@ -43,31 +43,35 @@ def test_query():
 
     query = data.get('query', '').strip()
     k = int(data.get('k', 3))
-    similarity_threshold = float(data.get('similarity_threshold', 0.1))
-    use_small_to_big = data.get('use_small_to_big', False)
+    similarity_threshold = float(data.get('similarity_threshold', 0.25))
+    use_small_to_big = data.get('use_small_to_big', True)
 
     if not query:
         logger.error(f'Test query failed: empty query, data={data}')
         return jsonify({'success': False, 'message': 'Query is required'}), 400
 
     try:
-        # 使用 Small-to-Big 检索（如果启用）
-        if use_small_to_big:
-            results = rag_utils.retrieve_with_parent(query, k=k, similarity_threshold=similarity_threshold)
-            retrieval_mode = 'small_to_big'
-        else:
-            results = rag_utils.retrieve_relevant_info(query, k=k, similarity_threshold=similarity_threshold)
-            retrieval_mode = 'standard'
+        # Use new RAG service with agentic routing
+        session_id = session.get('session_id')  # Get session ID from Flask session if available
+        results = rag_service.retrieve(
+            query=query,
+            k=k,
+            similarity_threshold=similarity_threshold,
+            use_small_to_big=use_small_to_big,
+            session_id=session_id
+        )
+
+        retrieval_mode = 'agentic_or_simple'
 
         return jsonify({
             'success': True,
             'retrieval_mode': retrieval_mode,
             'results': [
                 {
-                    'content': r['content'],
-                    'similarity': r['similarity'],
-                    'source': r['source'],
-                    'parent_id': r.get('parent_id')  # Small-to-Big 模式有 parent_id
+                    'content': r.get('content', ''),
+                    'similarity': r.get('similarity', 0),
+                    'source': r.get('source', 'unknown'),
+                    'parent_id': r.get('parent_id')  # Small-to-Big mode has parent_id
                 }
                 for r in results
             ]

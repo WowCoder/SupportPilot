@@ -1,0 +1,55 @@
+# RAG Configuration
+# This file controls the behavior of the Agentic RAG system
+
+# Agent configuration
+agent:
+  max_iterations: 3
+  timeout_seconds: 30
+  temperature: 0.3
+
+# Query router configuration
+router:
+  # Mode: "simple" (all queries use simple retrieval) or "agentic" (all queries use agent) or "auto" (route based on intent)
+  mode: auto
+  # Keywords that trigger agentic routing
+  agentic_keywords:
+    - "对比"
+    - "比较"
+    - "列出"
+    - "总结"
+    - "分析"
+    - "多跳"
+    - "推理"
+
+# Retrieval tools configuration
+tools:
+  vector:
+    enabled: true
+    k: 5
+    similarity_threshold: 0.25
+    use_small_to_big: true  # Default to Small-to-Big retrieval
+  bm25:
+    enabled: true
+    k: 5
+  filter:
+    enabled: true
+  ensemble:
+    enabled: true
+    use_rrf: true
+
+# Small-to-Big configuration
+small_to_big:
+  parent_size: 2000  # Large chunk size for return
+  child_size: 400    # Small chunk size for indexing
+
+# Chat memory integration
+chat_memory:
+  enabled: true
+  window_size: 5
+  timeout_seconds: 5
+
+# Logging
+logging:
+  level: INFO
+  log_tool_calls: true
+  log_agent_states: true
