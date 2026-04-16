@@ -10,7 +10,7 @@ os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['HF_HUB_OFFLINE'] = '1'
 os.environ['SENTENCE_TRANSFORMERS_HOME'] = os.path.expanduser("~/.cache/huggingface/hub")
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_experimental.text_splitter import SemanticChunker
@@ -60,9 +60,28 @@ class CustomEmbeddingFunction:
         """Embed a list of documents"""
         return self.embeddings.embed_documents(texts)
 
-    def embed_query(self, text):
-        """Embed a single query"""
-        return self.embeddings.embed_query(text)
+    def embed_query(self, input):
+        """Embed a single query or multiple queries
+
+        Note: ChromaDB passes input as a list of texts, and expects a list of embeddings back.
+        For a single query ['query'], should return [[embedding_vector]].
+        For multiple queries ['q1', 'q2'], should return [[embedding1], [embedding2]].
+        """
+        # ChromaDB passes input as a list of texts
+        if isinstance(input, str):
+            # Handle string input (backward compatibility)
+            embedding = self.embeddings.embed_query(input)
+            return [embedding]  # Return as list of embeddings
+        elif isinstance(input, list):
+            # Handle list input (ChromaDB standard)
+            embeddings = []
+            for text in input:
+                embedding = self.embeddings.embed_query(text)
+                embeddings.append(embedding)
+            return embeddings
+        else:
+            logger.warning(f'Unexpected input type for embed_query: {type(input)}')
+            return []
 
 
 class RAGUtils:

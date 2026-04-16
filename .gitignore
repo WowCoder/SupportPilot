@@ -1,10 +1,12 @@
 # Virtual environment
 venv/
 env/
+.venv/
 
 # Database files
 instance/
 parent_store/
+*.db
 
 # Uploads directory
 uploads/
