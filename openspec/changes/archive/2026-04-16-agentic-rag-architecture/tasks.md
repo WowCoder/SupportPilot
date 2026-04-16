@@ -18,14 +18,14 @@
 - [x] 3.3 实现元数据过滤工具 rag/tools/filter_tool.py
 - [x] 3.4 实现多路召回融合工具 rag/tools/ensemble_tool.py
 - [x] 3.5 迁移 parent_store.py 到 rag/tools/parent_store.py（Small-to-Big 大块存储）
-- [ ] 3.6 编写所有工具的单元测试
+- [x] 3.6 编写所有工具的单元测试
 
 ## 4. 查询路由器实现
 
 - [x] 4.1 实现关键词规则匹配器 rag/agents/router_rules.py
 - [x] 4.2 实现查询意图分类器 rag/agents/router_classifier.py
 - [x] 4.3 实现路由分发器 rag/agents/router.py
-- [ ] 4.4 编写路由器单元测试
+- [x] 4.4 编写路由器单元测试
 
 ## 5. Agentic RAG 引擎实现
 
@@ -36,7 +36,7 @@
 - [x] 5.5 实现结果合成节点 rag/agents/nodes/synthesis.py
 - [x] 5.6 使用 LangGraph 编排状态机 rag/agents/retrieval_agent.py
 - [x] 5.7 实现超时保护和迭代限制
-- [ ] 5.8 编写 Agent 集成测试
+- [x] 5.8 编写 Agent 集成测试
 
 ## 6. 代码迁移和清理
 
@@ -50,10 +50,10 @@
 
 ## 7. 测试验证
 
-- [ ] 7.1 运行测试套件验证功能
-- [ ] 7.2 测试简单查询检索
-- [ ] 7.3 测试复杂查询 Agentic RAG 路径
-- [ ] 7.4 性能和延迟基准测试
+- [x] 7.1 运行测试套件验证功能
+- [x] 7.2 测试简单查询检索
+- [x] 7.3 测试复杂查询 Agentic RAG 路径
+- [x] 7.4 性能和延迟基准测试
 
 ## 8. 文档和清理
 

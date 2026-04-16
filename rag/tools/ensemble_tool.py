@@ -141,10 +141,13 @@ class EnsembleTool(BaseTool):
             fused_results = []
             seen_content = set()
 
-            for (content, original_score), normalized_score in zip(sorted_scores, normalized_scores):
+            for i, (content, original_score) in enumerate(sorted_scores):
                 if content in seen_content:
                     continue
                 seen_content.add(content)
+
+                # Get normalized score from the same index
+                _, normalized_score = normalized_scores[i]
 
                 doc_template = content_to_doc.get(content, {})
                 fused_results.append({
