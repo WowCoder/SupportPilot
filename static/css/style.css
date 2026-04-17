@@ -51,19 +51,28 @@
 
     /* Font Sizes - Reduced for better UI (from DESIGN.md) */
     --font-size-hero: 2.50rem;    /* 40px (was 56px) */
-    --font-size-section: 1.75rem; /* 28px (was 40px) */
-    --font-size-tile: 1.31rem;    /* 21px (was 28px) */
-    --font-size-card-title: 1.06rem; /* 17px (was 21px) */
-    --font-size-subheading: 1.06rem; /* 17px (was 21px) */
-    --font-size-nav-heading: 1.50rem; /* 24px (was 34px) */
-    --font-size-subnav: 1.06rem;  /* 17px (was 24px) */
+    --font-size-section: 1.50rem; /* 24px (was 40px) */
+    --font-size-tile: 1.19rem;    /* 19px (was 28px) */
+    --font-size-card-title: 1rem; /* 16px (was 21px) */
+    --font-size-subheading: 1rem; /* 16px (was 21px) */
+    --font-size-nav-heading: 1.31rem; /* 21px (was 34px) */
+    --font-size-subnav: 0.94rem;  /* 15px (was 24px) */
     --font-size-body: 0.94rem;    /* 15px (was 17px) */
-    --font-size-button: 0.94rem;  /* 15px (was 17px) */
-    --font-size-button-large: 1rem; /* 16px (was 18px) */
+    --font-size-button: 0.88rem;  /* 14px (was 17px) */
+    --font-size-button-large: 0.94rem; /* 15px (was 18px) */
     --font-size-link: 0.81rem;    /* 13px (was 14px) */
     --font-size-caption: 0.81rem; /* 13px (was 14px) */
     --font-size-micro: 0.69rem;   /* 11px (was 12px) */
     --font-size-nano: 0.56rem;    /* 9px (was 10px) */
+
+    /* Letter Spacing - negative tracking at all sizes (DESIGN.md) */
+    --letter-spacing-hero: -0.28px;
+    --letter-spacing-section: -0.2px;
+    --letter-spacing-tile: -0.15px;
+    --letter-spacing-body: -0.15px;
+    --letter-spacing-link: -0.1px;
+    --letter-spacing-micro: -0.08px;
+    --letter-spacing-nano: -0.05px;
 
     /* Font Weights */
     --font-weight-light: 300;
@@ -165,6 +174,59 @@ main {
 }
 
 /* ========================================
+   Hero Sections - Apple Style
+   ======================================== */
+.hero {
+    background-color: var(--sk-black);
+    color: var(--sk-white);
+    padding: var(--spacing-24) 0;
+    text-align: center;
+}
+
+.hero h1 {
+    color: var(--sk-white);
+    margin-bottom: var(--spacing-10);
+}
+
+.hero p {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-section);
+    max-width: 600px;
+    margin: 0 auto var(--spacing-20);
+}
+
+.hero-actions {
+    display: flex;
+    gap: var(--spacing-14);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Section alternating colors */
+.section-dark {
+    background-color: var(--sk-black);
+    color: var(--sk-white);
+    padding: var(--spacing-24) 0;
+}
+
+.section-dark h1,
+.section-dark h2,
+.section-dark h3,
+.section-dark h4 {
+    color: var(--sk-white);
+}
+
+.section-dark p {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.section-light {
+    background-color: var(--sk-light-gray);
+    color: var(--sk-text-primary);
+    padding: var(--spacing-24) 0;
+}
+
+/* ========================================
    Typography
    ======================================== */
 h1 {
@@ -181,6 +243,7 @@ h2 {
     font-size: var(--font-size-section);
     font-weight: var(--font-weight-semibold);
     line-height: var(--line-height-section);
+    letter-spacing: var(--letter-spacing-section);
     color: var(--sk-text-primary);
 }
 
@@ -198,7 +261,7 @@ h4 {
     font-size: var(--font-size-card-title);
     font-weight: var(--font-weight-bold);
     line-height: var(--line-height-card);
-    letter-spacing: var(--letter-spacing-card);
+    letter-spacing: var(--letter-spacing-tile);
     color: var(--sk-text-primary);
 }
 
@@ -223,15 +286,37 @@ a {
     color: var(--sk-body-link-color);
     text-decoration: none;
     transition: color var(--transition-fast);
+    font-weight: var(--font-weight-medium);
 }
 
 a:hover {
+    color: #0055a1;
     text-decoration: underline;
 }
 
 /* Links in dark sections */
 .dark-section a {
     color: var(--sk-bright-blue);
+}
+
+.dark-section a:hover {
+    color: #5aabff;
+}
+
+/*正文样式 */
+p {
+    line-height: var(--line-height-body);
+    margin-bottom: var(--spacing-17);
+    color: var(--sk-text-primary);
+}
+
+/* 次要文本 */
+.text-secondary {
+    color: var(--sk-text-secondary);
+}
+
+.text-tertiary {
+    color: var(--sk-text-tertiary);
 }
 
 /* ========================================
@@ -242,11 +327,11 @@ a:hover {
     align-items: center;
     justify-content: center;
     gap: var(--spacing-8);
-    padding: var(--spacing-8) var(--spacing-15);
+    padding: var(--spacing-10) var(--spacing-20);
     font-family: var(--font-text);
     font-size: var(--font-size-button);
     font-weight: var(--font-weight-regular);
-    line-height: var(--line-height-button);
+    line-height: 1.5;
     text-decoration: none;
     border: 1px solid transparent;
     border-radius: var(--radius-standard);
@@ -264,10 +349,16 @@ a:hover {
 .btn-primary {
     background-color: var(--sk-focus-color);
     color: var(--sk-white);
+    font-weight: var(--font-weight-medium);
 }
 
 .btn-primary:hover:not(:disabled) {
-    filter: brightness(1.1);
+    background-color: #0077ed;
+    transform: scale(1.02);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .btn-primary:focus {
@@ -279,16 +370,35 @@ a:hover {
 .btn-dark {
     background-color: var(--sk-near-black);
     color: var(--sk-white);
+    font-weight: var(--font-weight-medium);
+}
+
+.btn-dark:hover:not(:disabled) {
+    background-color: #2d2d2f;
 }
 
 /* Secondary / Light */
 .btn-secondary {
-    background-color: var(--sk-button-default-light);
-    color: var(--sk-text-secondary);
+    background-color: var(--sk-light-gray);
+    color: var(--sk-text-primary);
+    font-weight: var(--font-weight-medium);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .btn-secondary:hover:not(:disabled) {
-    background-color: var(--sk-button-active);
+    background-color: #e8e8ed;
+}
+
+/* Outline */
+.btn-outline {
+    background-color: transparent;
+    color: var(--sk-focus-color);
+    border: 1px solid var(--sk-focus-color);
+    font-weight: var(--font-weight-medium);
+}
+
+.btn-outline:hover:not(:disabled) {
+    background-color: rgba(0, 113, 227, 0.05);
 }
 
 /* Pill Link (Learn More / Shop) */
@@ -297,8 +407,10 @@ a:hover {
     color: var(--sk-body-link-color);
     border: 1px solid var(--sk-body-link-color);
     border-radius: var(--radius-pill);
-    padding: var(--spacing-8) var(--spacing-15);
+    padding: var(--spacing-10) var(--spacing-20);
     font-size: var(--font-size-link);
+    font-weight: var(--font-weight-medium);
+    transition: all var(--transition-fast);
 }
 
 .dark-section .btn-pill {
@@ -308,15 +420,21 @@ a:hover {
 
 .btn-pill:hover {
     text-decoration: underline;
+    transform: scale(1.02);
 }
 
 /* Filter / Search Button */
 .btn-filter {
     background-color: var(--sk-button-default-light);
     color: var(--sk-text-secondary);
-    padding: 0 var(--spacing-14);
+    padding: var(--spacing-11) var(--spacing-17);
     border-radius: var(--radius-comfortable);
-    border: 3px solid rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    font-size: var(--font-size-body);
+}
+
+.btn-filter:hover {
+    background-color: #f0f0f5;
 }
 
 .btn-filter:focus {
@@ -436,49 +554,66 @@ a:hover {
     letter-spacing: var(--letter-spacing-body);
 }
 
+.form-input:hover,
+.form-textarea:hover,
+.form-select:hover {
+    border-color: #a1a1a6;
+}
+
 .form-input:focus,
 .form-textarea:focus,
 .form-form-select:focus {
     outline: none;
     border-color: var(--sk-focus-color);
-    box-shadow: 0 0 0 2px var(--sk-focus-color);
+    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
 }
 
 .form-input::placeholder,
 .form-textarea::placeholder {
-    color: #86868b;
+    color: var(--sk-text-tertiary);
 }
 
 .form-textarea {
-    min-height: 100px;
+    min-height: 120px;
     resize: vertical;
 }
 
 .form-help {
-    margin-top: var(--spacing-5);
+    margin-top: var(--spacing-6);
     font-size: var(--font-size-micro);
     color: var(--sk-text-secondary);
 }
 
 .form-error {
-    margin-top: var(--spacing-5);
+    margin-top: var(--spacing-6);
     font-size: var(--font-size-micro);
     color: var(--sk-error);
+}
+
+/* Checkbox and Radio */
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--sk-focus-color);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
 }
 
 /* ========================================
    Cards
    ======================================== */
 .card {
-    background-color: var(--sk-light-gray);
-    border-radius: var(--radius-standard);
+    background-color: var(--bg-card);
+    border-radius: var(--radius-large);
     overflow: hidden;
     transition: box-shadow var(--transition-normal), transform var(--transition-normal);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .card-header {
     padding: var(--spacing-20) var(--spacing-24);
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background-color: var(--sk-light-gray);
 }
 
 .card-body {
@@ -488,22 +623,36 @@ a:hover {
 .card-footer {
     padding: var(--spacing-17) var(--spacing-24);
     border-top: 1px solid rgba(0, 0, 0, 0.05);
+    background-color: var(--sk-light-gray);
 }
 
 /* Elevated card */
 .card-elevated {
     box-shadow: var(--shadow-card);
+    border: none;
 }
 
 /* Card hover effect */
-.card-elevated:hover {
-    box-shadow: rgba(0, 0, 0, 0.3) 5px 7px 35px 0px;
-    transform: scale(1.02);
+.card-elevated:hover, .card:hover {
+    box-shadow: rgba(0, 0, 0, 0.15) 5px 7px 35px 0px;
+    transform: scale(1.01);
 }
 
 /* White card variant */
 .card-white {
     background-color: var(--sk-white);
+}
+
+/* Dark card variant */
+.card-dark {
+    background-color: var(--sk-black);
+    color: var(--sk-white);
+}
+
+.card-dark .card-header,
+.card-dark .card-footer {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* ========================================
@@ -549,6 +698,44 @@ a:hover {
 }
 
 /* ========================================
+   Badges
+   ======================================== */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-6);
+    padding: var(--spacing-5) var(--spacing-12);
+    border-radius: var(--radius-pill);
+    font-size: var(--font-size-micro);
+    font-weight: var(--font-weight-medium);
+}
+
+.badge-primary {
+    background-color: rgba(0, 113, 227, 0.1);
+    color: var(--sk-focus-color);
+}
+
+.badge-success {
+    background-color: rgba(52, 199, 89, 0.1);
+    color: var(--sk-success);
+}
+
+.badge-danger {
+    background-color: rgba(255, 59, 48, 0.1);
+    color: var(--sk-error);
+}
+
+.badge-warning {
+    background-color: rgba(255, 149, 0, 0.1);
+    color: var(--sk-warning);
+}
+
+.badge-gray {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--sk-text-secondary);
+}
+
+/* ========================================
    Container
    ======================================== */
 .container {
@@ -578,7 +765,7 @@ a:hover {
     align-items: center;
     margin-bottom: var(--spacing-24);
     padding-bottom: var(--spacing-20);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .page-title {
@@ -586,12 +773,46 @@ a:hover {
     font-size: var(--font-size-section);
     font-weight: var(--font-weight-semibold);
     color: var(--sk-text-primary);
+    letter-spacing: var(--letter-spacing-section);
+    margin: 0;
 }
 
 .page-actions {
     display: flex;
     gap: var(--spacing-11);
     flex-wrap: wrap;
+}
+
+/* Dashboard Stats */
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-24);
+    margin-bottom: var(--spacing-24);
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-large);
+    padding: var(--spacing-24);
+    text-align: center;
+    box-shadow: var(--shadow-card);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.stat-value {
+    font-family: var(--font-display);
+    font-size: var(--font-size-tile);
+    font-weight: var(--font-weight-semibold);
+    color: var(--sk-focus-color);
+    margin-bottom: var(--spacing-8);
+    letter-spacing: var(--letter-spacing-tile);
+}
+
+.stat-label {
+    font-family: var(--font-text);
+    font-size: var(--font-size-micro);
+    color: var(--sk-text-secondary);
 }
 
 /* ========================================
