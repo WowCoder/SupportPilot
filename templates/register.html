@@ -60,7 +60,7 @@
 {% block extra_css %}
 <style>
     body {
-        background: var(--bg-gradient);
+        background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -75,69 +75,58 @@
         width: 100%;
         max-width: 450px;
         margin: 0;
-        padding: var(--spacing-6);
+        padding: var(--spacing-24);
+        background-color: var(--bg-card);
+        border-radius: var(--radius-large);
+        box-shadow: var(--shadow-card);
     }
     .auth-header {
         text-align: center;
-        margin-bottom: var(--spacing-6);
+        margin-bottom: var(--spacing-24);
     }
     .auth-title {
-        font-size: var(--font-size-2xl);
-        color: var(--color-gray-800);
-        margin-bottom: var(--spacing-2);
+        font-family: var(--font-display);
+        font-size: var(--font-size-section);
+        font-weight: var(--font-weight-semibold);
+        color: var(--sk-text-primary);
+        margin-bottom: var(--spacing-8);
+    }
+    .auth-title i {
+        color: var(--sk-focus-color);
     }
     .auth-subtitle {
-        color: var(--color-gray-500);
-        font-size: var(--font-size-sm);
+        font-family: var(--font-text);
+        font-size: var(--font-size-body);
+        color: var(--sk-text-secondary);
     }
-    .btn-block {
-        width: 100%;
-        justify-content: center;
-        padding: var(--spacing-4);
-        font-size: var(--font-size-lg);
-        margin-top: var(--spacing-4);
-    }
-
-    /* Form error styles */
-    .form-error {
-        color: var(--color-danger);
-        font-size: var(--font-size-xs);
-        min-height: 18px;
-        margin-top: var(--spacing-1);
-    }
-
-    .form-input.error {
-        border-color: var(--color-danger);
-        background-color: var(--color-danger-bg);
-    }
-
-    .flash-messages {
-        margin-bottom: var(--spacing-4);
-    }
-
-    .flash-messages:empty {
-        display: none;
-    }
-
-    .flash-message {
-        padding: var(--spacing-3);
-        border-radius: var(--radius-md);
-        margin-bottom: var(--spacing-2);
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-2);
-    }
-
-    .flash-message.danger {
-        background-color: var(--color-danger-bg);
-        color: var(--color-danger);
-        border: 1px solid var(--color-danger);
-    }
-
     .auth-footer {
         text-align: center;
-        margin-top: var(--spacing-6);
-        color: var(--color-gray-500);
+        margin-top: var(--spacing-20);
+        font-size: var(--font-size-micro);
+        color: var(--sk-text-secondary);
+    }
+    .auth-footer a {
+        color: var(--sk-body-link-color);
+        font-weight: var(--font-weight-medium);
+    }
+    .auth-footer a:hover {
+        text-decoration: underline;
+    }
+    .form-error {
+        color: var(--sk-error);
+        font-size: var(--font-size-micro);
+        min-height: 18px;
+        margin-top: var(--spacing-5);
+    }
+    .form-input.error {
+        border-color: var(--sk-error);
+        box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.2);
+    }
+    .flash-messages {
+        margin-bottom: var(--spacing-20);
+    }
+    .flash-messages:empty {
+        display: none;
     }
 </style>
 {% endblock %}

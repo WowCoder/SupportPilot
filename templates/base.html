@@ -16,18 +16,20 @@
     <!-- Navigation -->
     {% block navbar %}
     <nav class="navbar">
-        <a href="{{ url_for('main.index') }}" class="navbar-brand">
-            <i class="fas fa-headset"></i> SupportPilot
-        </a>
-        {% if current_user.is_authenticated %}
-        <ul class="navbar-nav">
-            <li><a href="{{ url_for('main.index') }}"><i class="fas fa-home"></i> 首页</a></li>
-            {% if current_user.role == 'tech_support' %}
-            <li><a href="{{ url_for('document.upload') }}"><i class="fas fa-upload"></i> 上传文档</a></li>
+        <div class="navbar-container">
+            <a href="{{ url_for('main.index') }}" class="navbar-brand">
+                <i class="fas fa-headset"></i> SupportPilot
+            </a>
+            {% if current_user.is_authenticated %}
+            <ul class="navbar-menu">
+                <li><a href="{{ url_for('main.index') }}"><i class="fas fa-home"></i> 首页</a></li>
+                {% if current_user.role == 'tech_support' %}
+                <li><a href="{{ url_for('document.upload') }}"><i class="fas fa-upload"></i> 上传文档</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> 退出</a></li>
+            </ul>
             {% endif %}
-            <li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> 退出</a></li>
-        </ul>
-        {% endif %}
+        </div>
     </nav>
     {% endblock %}
 
