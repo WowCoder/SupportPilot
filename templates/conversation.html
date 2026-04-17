@@ -59,6 +59,30 @@
     </div>
     {% endif %}
 
+    <!-- Ticket Status Bar (for user) -->
+    {% if current_user.role != 'tech_support' %}
+    <div class="ticket-status-bar" id="ticketStatusBar">
+        <div class="ticket-status-info">
+            <span class="status-badge" id="ticketStatusBadge">
+                <i class="fas fa-circle"></i> 进行中
+            </span>
+            <span class="round-count" id="roundCount">
+                <i class="fas fa-comments"></i> 第 <strong id="currentRound">0</strong> 轮
+            </span>
+        </div>
+        <div class="ticket-actions">
+            <button type="button" class="btn btn-warning btn-sm" id="handoffBtn" style="display: none;"
+                    onclick="requestHumanHandoff()">
+                <i class="fas fa-headset"></i> 需要人工介入
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="closeTicketBtn"
+                    onclick="confirmCloseTicket()">
+                <i class="fas fa-times-circle"></i> 关闭工单
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Chat Container -->
     <div class="chat-container">
         <div class="chat-messages" id="chatMessages">
@@ -110,31 +134,152 @@
 
 <!-- Scroll to bottom script -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const chatMessages = document.getElementById('chatMessages');
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    });
+const conversationId = {{ conversation.id }};
+let currentRound = 0;
+let shouldShowHandoff = false;
 
-    function showCloseModal() {
-        const modal = document.getElementById('closeModal');
+// Load ticket status on page load
+async function loadTicketStatus() {
+    try {
+        const resp = await fetch(`/api/ticket/${conversationId}/status`);
+        const data = await resp.json();
+
+        if (data.success) {
+            currentRound = data.round_count;
+            shouldShowHandoff = data.should_show_handoff;
+
+            // Update UI
+            document.getElementById('currentRound').textContent = currentRound;
+
+            // Show handoff button if needed
+            if (shouldShowHandoff && data.status === 'open') {
+                document.getElementById('handoffBtn').style.display = 'block';
+            }
+
+            // Update status badge
+            updateStatusBadge(data.status);
+        }
+    } catch (err) {
+        console.error('Failed to load ticket status:', err);
+    }
+}
+
+function updateStatusBadge(status) {
+    const badge = document.getElementById('ticketStatusBadge');
+    if (!badge) return;
+
+    const statusConfig = {
+        'open': { icon: 'fa-circle', text: '进行中', color: 'status-active' },
+        'pending_human': { icon: 'fa-clock', text: '待人工处理', color: 'status-pending' },
+        'closed': { icon: 'fa-check-circle', text: '已关闭', color: 'status-closed' }
+    };
+
+    const config = statusConfig[status] || statusConfig['open'];
+    badge.className = `status-badge ${config.color}`;
+    badge.innerHTML = `<i class="fas ${config.icon}"></i> ${config.text}`;
+}
+
+// Request human handoff
+async function requestHumanHandoff() {
+    if (!confirm('确定要请求人工介入吗？技术支持将尽快为您服务。')) {
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/ticket/${conversationId}/handoff`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            alert('已请求人工介入，技术支持将尽快为您服务');
+            document.getElementById('handoffBtn').style.display = 'none';
+            updateStatusBadge('pending_human');
+        } else {
+            alert(data.message || '请求失败，请稍后重试');
+        }
+    } catch (err) {
+        console.error('Handoff error:', err);
+        alert('请求失败，请稍后重试');
+    }
+}
+
+// Confirm close ticket
+function confirmCloseTicket() {
+    const modal = document.getElementById('closeTicketModal');
+    if (modal) {
         modal.style.display = 'block';
     }
+}
 
-    function hideCloseModal() {
-        const modal = document.getElementById('closeModal');
+// Close ticket modal
+function hideCloseTicketModal() {
+    const modal = document.getElementById('closeTicketModal');
+    if (modal) {
         modal.style.display = 'none';
     }
+}
 
-    // Close modal when clicking outside
-    window.onclick = function(event) {
-        const modal = document.getElementById('closeModal');
-        if (event.target == modal) {
-            hideCloseModal();
+// Close ticket via AJAX
+async function closeTicket(generateFaq) {
+    try {
+        const resp = await fetch(`/api/ticket/${conversationId}/close`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ generate_faq: generateFaq })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            alert('工单已关闭');
+            location.reload();
+        } else {
+            alert(data.message || '关闭失败，请稍后重试');
         }
+    } catch (err) {
+        console.error('Close ticket error:', err);
+        alert('关闭失败，请稍后重试');
     }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Load ticket status
+    loadTicketStatus();
+});
+
+function showCloseModal() {
+    const modal = document.getElementById('closeModal');
+    modal.style.display = 'block';
+}
+
+function hideCloseModal() {
+    const modal = document.getElementById('closeModal');
+    modal.style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('closeModal');
+    const closeTicketModal = document.getElementById('closeTicketModal');
+    if (event.target == modal) {
+        hideCloseModal();
+    }
+    if (event.target == closeTicketModal) {
+        hideCloseTicketModal();
+    }
+}
 </script>
 
-<!-- Close Confirmation Modal -->
+<!-- Close Confirmation Modal (Tech Support) -->
 <div id="closeModal" class="modal" style="display: none;">
     <div class="modal-content">
         <div class="modal-header">
@@ -164,6 +309,28 @@
                     确认关闭
                 </button>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- User Close Ticket Modal -->
+<div id="closeTicketModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>关闭工单</h3>
+            <span class="modal-close" onclick="hideCloseTicketModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>确认要关闭此工单吗？</p>
+            <p style="color: #666; font-size: 14px; margin-top: 10px;">
+                关闭后，您将无法继续发送消息。如需继续咨询，请创建新工单。
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="hideCloseTicketModal()">取消</button>
+            <button type="button" class="btn btn-danger" onclick="closeTicket(false)">
+                确认关闭
+            </button>
         </div>
     </div>
 </div>
@@ -226,6 +393,86 @@
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+}
+
+/* Ticket Status Bar */
+.ticket-status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    color: white;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.ticket-status-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    background: rgba(255,255,255,0.2);
+}
+
+.status-badge.status-active {
+    background: rgba(34, 197, 94, 0.3);
+}
+
+.status-badge.status-pending {
+    background: rgba(251, 191, 36, 0.3);
+}
+
+.status-badge.status-closed {
+    background: rgba(107, 114, 128, 0.3);
+}
+
+.round-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.round-count strong {
+    font-size: 16px;
+}
+
+.ticket-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.ticket-actions .btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+}
+
+.ticket-actions .btn-sm:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.ticket-actions .btn-warning {
+    background: rgba(251, 191, 36, 0.8);
+    border-color: rgba(251, 191, 36, 1);
+}
+
+.ticket-actions .btn-warning:hover {
+    background: rgba(251, 191, 36, 1);
 }
 </style>
 {% endblock %}

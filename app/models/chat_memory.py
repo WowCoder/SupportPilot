@@ -31,6 +31,10 @@ class ChatMemory(db.Model):
     compressed_at = db.Column(db.DateTime, nullable=True)
     compression_batch_id = db.Column(db.String(50), nullable=True)  # Groups records compressed together
 
+    # Ticket tracking fields
+    ticket_status = db.Column(db.String(30), default='open', index=True)  # 'open', 'pending_human', 'closed'
+    round_count = db.Column(db.Integer, default=0)  # Current round count for this session
+
     def __repr__(self) -> str:
         return f'<ChatMemory {self.id} (session={self.session_id}, status={self.status})>'
 
@@ -57,3 +61,15 @@ class ChatMemory(db.Model):
         self.compressed_at = datetime.utcnow()
         if batch_id:
             self.compression_batch_id = batch_id
+
+    def update_ticket_status(self, status: str):
+        """Update ticket status"""
+        self.ticket_status = status
+
+    def increment_round(self):
+        """Increment conversation round count"""
+        self.round_count += 1
+
+    def should_show_handoff(self, threshold: int = 3) -> bool:
+        """Check if human handoff button should be shown"""
+        return self.round_count >= threshold and self.ticket_status == 'open'

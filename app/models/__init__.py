@@ -7,5 +7,6 @@ from .message import Message
 from .document import Document
 from .chat_memory import ChatMemory
 from .faq_entry import FAQEntry
+from .support_ticket import SupportTicket
 
-__all__ = ['User', 'Conversation', 'Message', 'Document', 'ChatMemory', 'FAQEntry']
+__all__ = ['User', 'Conversation', 'Message', 'Document', 'ChatMemory', 'FAQEntry', 'SupportTicket']

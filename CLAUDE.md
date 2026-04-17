@@ -43,3 +43,34 @@ result = retrieval_agent.run(query="对比 A 和 B", session_id="conv_123")
 - Chat memory system stays independent (QueryRewriter in app/services/ retained)
 - rag_utils.py kept for document processing (ingestion), not retrieval
 - Timeout protection and iteration limits built into agent
+
+## Ticket Management and FAQ System
+
+### Human Handoff
+- **Trigger**: After 3 conversation rounds (configurable via `HANDOFF_ROUND_THRESHOLD`)
+- **User action**: "需要人工介入" button appears in chat interface
+- **Backend**: `app/services/ticket_service.py` manages ticket lifecycle
+
+### Ticket Lifecycle
+- States: `open` → `pending_human` → `closed`
+- Users can close their own tickets
+- Tech support can close tickets with optional FAQ generation
+
+### FAQ Review Workflow
+1. AI generates FAQ draft from conversation
+2. Tech support reviews and edits
+3. Confirmation syncs to ChromaDB via `rag/faq_vector_sync.py`
+4. Rejected FAQs are discarded
+
+### FAQ Management
+- **Page**: `/faq/manage` (tech support only)
+- **Features**: CRUD operations, search/filter, version history
+- **API**: `/api/faq/*` endpoints in `app/api/faq_routes.py`
+
+### Key Files
+- `app/models/support_ticket.py` - Ticket model
+- `app/models/faq_entry.py` - FAQ entry with review status
+- `app/services/ticket_service.py` - Ticket lifecycle management
+- `app/services/faq_review_service.py` - FAQ review workflow
+- `app/services/faq_management_service.py` - FAQ CRUD operations
+- `rag/faq_vector_sync.py` - ChromaDB synchronization

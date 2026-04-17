@@ -57,6 +57,9 @@ class Config:
     FAQ_SIMILARITY_THRESHOLD: float = 0.9
     SUMMARY_COMPRESSION_RATIO_TARGET: int = 10
 
+    # Human Handoff
+    HANDOFF_ROUND_THRESHOLD: int = 3  # Show handoff button after 3 rounds
+
 
 class ProductionConfig(Config):
     """Production configuration"""

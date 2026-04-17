@@ -1,0 +1,845 @@
+{% extends "base.html" %}
+
+{% block title %}FAQ 管理 - SupportPilot{% endblock %}
+
+{% block content %}
+<div class="container container-lg">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-question-circle"></i> FAQ 管理
+        </h1>
+        <div class="page-actions">
+            <button type="button" class="btn btn-primary" onclick="showAddFaqModal()">
+                <i class="fas fa-plus"></i> 新增 FAQ
+            </button>
+            <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="dashboard-stats mb-6">
+        <div class="stat-card">
+            <div class="stat-value" id="totalFaqs">-</div>
+            <div class="stat-label">总 FAQ 数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="confirmedFaqs">-</div>
+            <div class="stat-label">已确认</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="pendingFaqs">-</div>
+            <div class="stat-label">待审核</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="draftFaqs">-</div>
+            <div class="stat-label">草稿</div>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card mb-6">
+        <div class="card-body">
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label class="filter-label">状态</label>
+                    <select id="statusFilter" class="form-select" onchange="loadFaqs()">
+                        <option value="">全部</option>
+                        <option value="confirmed">已确认</option>
+                        <option value="pending_review">待审核</option>
+                        <option value="draft">草稿</option>
+                        <option value="rejected">已拒绝</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">分类</label>
+                    <select id="categoryFilter" class="form-select" onchange="loadFaqs()">
+                        <option value="">全部分类</option>
+                    </select>
+                </div>
+                <div class="filter-group filter-search">
+                    <label class="filter-label">搜索</label>
+                    <div class="search-input-wrapper">
+                        <input type="text" id="searchInput" class="form-input"
+                               placeholder="搜索问题或答案..."
+                               onkeypress="if(event.key==='Enter')loadFaqs()">
+                        <button type="button" class="btn btn-search" onclick="loadFaqs()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ List -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-container">
+                <table class="data-table" id="faqTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                            </th>
+                            <th>问题</th>
+                            <th>答案</th>
+                            <th>分类</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th style="width: 180px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="faqTableBody">
+                        <tr>
+                            <td colspan="7" class="empty-state">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>加载中...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination"></div>
+
+            <!-- Bulk Actions -->
+            <div class="bulk-actions" id="bulkActions" style="display: none;">
+                <span class="selected-count" id="selectedCount">已选择 0 项</span>
+                <button type="button" class="btn btn-danger btn-sm" onclick="bulkDelete()">
+                    <i class="fas fa-trash"></i> 批量删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit FAQ Modal -->
+<div id="faqModal" class="modal" style="display: none;">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h3 id="modalTitle">新增 FAQ</h3>
+            <span class="modal-close" onclick="hideFaqModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="faqForm">
+                <input type="hidden" id="faqId" value="">
+                <div class="form-group">
+                    <label class="form-label">问题 <span class="required">*</span></label>
+                    <textarea id="faqQuestion" class="form-input" rows="3" required
+                              placeholder="请输入问题..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">答案 <span class="required">*</span></label>
+                    <textarea id="faqAnswer" class="form-input" rows="6" required
+                              placeholder="请输入答案..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">分类</label>
+                    <input type="text" id="faqCategory" class="form-input"
+                           placeholder="请输入分类，如：账户、支付、技术...">
+                </div>
+                <div class="form-group" id="changeReasonGroup" style="display: none;">
+                    <label class="form-label">修改原因</label>
+                    <input type="text" id="changeReason" class="form-input"
+                           placeholder="请输入修改原因（可选）">
+                </div>
+            </form>
+            <!-- Progress bar for vectorization -->
+            <div id="syncProgressContainer" class="sync-progress-container" style="display: none;">
+                <div class="sync-progress-header">
+                    <i class="fas fa-sync fa-spin"></i>
+                    <span>正在向量化...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="syncProgressFill" style="width: 0%;"></div>
+                </div>
+                <div class="sync-progress-text" id="syncProgressText">0%</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="hideFaqModal()">取消</button>
+            <button type="button" class="btn btn-success" id="confirmFaqBtn" style="display: none;"
+                    onclick="confirmFaqFromModal()">
+                <i class="fas fa-check-circle"></i> 确认并添加
+            </button>
+            <button type="button" class="btn btn-primary" id="saveFaqBtn" onclick="saveFaq()">
+                <i class="fas fa-save"></i> 保存
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Version History Modal -->
+<div id="versionModal" class="modal" style="display: none;">
+    <div class="modal-content modal-lg">
+        <div class="modal-header">
+            <h3>版本历史</h3>
+            <span class="modal-close" onclick="hideVersionModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="versionList" class="version-list">
+                <p class="text-center"><i class="fas fa-spinner fa-spin"></i> 加载中...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>确认删除</h3>
+            <span class="modal-close" onclick="hideDeleteModal()">&times;</span>
+        </div>
+        <div class="modal-body text-center">
+            <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #f59e0b; margin-bottom: 16px;"></i>
+            <p>确定要删除选中的 FAQ 吗？</p>
+            <p style="color: #666; font-size: 14px;">此操作将同时从知识库中移除相关条目</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">取消</button>
+            <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                <i class="fas fa-trash"></i> 删除
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.modal-lg {
+    max-width: 800px;
+}
+
+.filter-bar {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 150px;
+}
+
+.filter-label {
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+}
+
+.filter-search {
+    flex: 1;
+    min-width: 250px;
+}
+
+.search-input-wrapper {
+    display: flex;
+    gap: 0;
+}
+
+.search-input-wrapper .form-input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    flex: 1;
+}
+
+.search-input-wrapper .btn-search {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    padding: 10px 16px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.data-table th {
+    background: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+    font-size: 13px;
+}
+
+.data-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-badge.confirmed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.pending_review {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge.draft {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.status-badge.rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.bulk-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    margin-top: 16px;
+}
+
+.selected-count {
+    font-size: 14px;
+    color: #666;
+}
+
+.version-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.version-item {
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    background: #f9fafb;
+}
+
+.version-item:last-child {
+    margin-bottom: 0;
+}
+
+.version-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.version-time {
+    font-size: 13px;
+    color: #666;
+}
+
+.version-changes {
+    font-size: 13px;
+    color: #374151;
+}
+
+.version-content {
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.version-content strong {
+    color: #111827;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.required {
+    color: #ef4444;
+}
+
+/* Sync progress bar */
+.sync-progress-container {
+    margin-top: 20px;
+    padding: 16px;
+    background: #f3f4f6;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.sync-progress-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    color: #374151;
+    font-weight: 500;
+}
+
+.sync-progress-header i {
+    color: #667eea;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+.sync-progress-text {
+    text-align: right;
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let selectedFaqs = [];
+let faqToDelete = null;
+
+// Load FAQs
+async function loadFaqs(page = 1) {
+    currentPage = page;
+
+    const status = document.getElementById('statusFilter').value;
+    const search = document.getElementById('searchInput').value;
+
+    try {
+        const params = new URLSearchParams({
+            page: page,
+            per_page: 20,
+            ...(status && { status }),
+            ...(search && { search })
+        });
+
+        const resp = await fetch(`/api/faq?${params}`);
+        const data = await resp.json();
+
+        if (data.success) {
+            renderFaqTable(data.items);
+            renderPagination(data.pagination);
+            updateStats(data.items);
+        }
+    } catch (err) {
+        console.error('Failed to load FAQs:', err);
+    }
+}
+
+// Render FAQ table
+function renderFaqTable(items) {
+    const tbody = document.getElementById('faqTableBody');
+
+    if (!items || items.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>暂无 FAQ</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = items.map(faq => `
+        <tr>
+            <td>
+                <input type="checkbox" class="faq-checkbox" value="${faq.id}"
+                       onchange="updateSelectedCount()">
+            </td>
+            <td style="max-width: 300px;">
+                <div style="font-weight: 500; color: #111827;">${escapeHtml(faq.question)}</div>
+            </td>
+            <td style="max-width: 400px;">
+                <div style="color: #666; font-size: 14px; max-height: 60px; overflow: hidden;">
+                    ${escapeHtml(faq.answer.substring(0, 100))}${faq.answer.length > 100 ? '...' : ''}
+                </div>
+            </td>
+            <td>${faq.category || '-'}</td>
+            <td>
+                <span class="status-badge ${faq.status}">
+                    ${getStatusText(faq.status)}
+                </span>
+            </td>
+            <td style="font-size: 13px; color: #666;">
+                ${faq.created_at ? new Date(faq.created_at).toLocaleString('zh-CN') : '-'}
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-secondary"
+                        onclick="editFaq(${faq.id})" title="编辑">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-info"
+                        onclick="viewVersions(${faq.id})" title="版本历史">
+                    <i class="fas fa-history"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-danger"
+                        onclick="confirmDeleteFaq(${faq.id})" title="删除">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Render pagination
+function renderPagination(pagination) {
+    const container = document.getElementById('pagination');
+
+    if (pagination.pages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    if (pagination.has_prev) {
+        html += `<a href="javascript:void(0)" onclick="loadFaqs(${pagination.page - 1})"
+                   class="pagination-btn"><i class="fas fa-chevron-left"></i> 上一页</a>`;
+    }
+
+    html += `<span class="pagination-text">第 ${pagination.page} / ${pagination.pages} 页</span>`;
+
+    if (pagination.has_next) {
+        html += `<a href="javascript:void(0)" onclick="loadFaqs(${pagination.page + 1})"
+                   class="pagination-btn">下一页 <i class="fas fa-chevron-right"></i></a>`;
+    }
+
+    container.innerHTML = html;
+}
+
+// Update stats
+function updateStats(items) {
+    // Could fetch total counts separately
+    document.getElementById('totalFaqs').textContent = '-';
+}
+
+// Get status text
+function getStatusText(status) {
+    const texts = {
+        'confirmed': '已确认',
+        'pending_review': '待审核',
+        'draft': '草稿',
+        'rejected': '已拒绝'
+    };
+    return texts[status] || status;
+}
+
+// Escape HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Toggle select all
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.faq-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    updateSelectedCount();
+}
+
+// Update selected count
+function updateSelectedCount() {
+    selectedFaqs = Array.from(document.querySelectorAll('.faq-checkbox:checked'))
+                        .map(cb => parseInt(cb.value));
+
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+
+    if (selectedFaqs.length > 0) {
+        bulkActions.style.display = 'flex';
+        selectedCount.textContent = `已选择 ${selectedFaqs.length} 项`;
+    } else {
+        bulkActions.style.display = 'none';
+    }
+}
+
+// Show add FAQ modal
+function showAddFaqModal() {
+    document.getElementById('modalTitle').textContent = '新增 FAQ';
+    document.getElementById('faqId').value = '';
+    document.getElementById('faqQuestion').value = '';
+    document.getElementById('faqAnswer').value = '';
+    document.getElementById('faqCategory').value = '';
+    document.getElementById('changeReasonGroup').style.display = 'none';
+    document.getElementById('faqModal').style.display = 'block';
+}
+
+// Hide FAQ modal
+function hideFaqModal() {
+    document.getElementById('faqModal').style.display = 'none';
+}
+
+// Edit FAQ
+async function editFaq(faqId) {
+    try {
+        const resp = await fetch(`/api/faq/${faqId}`);
+        const data = await resp.json();
+
+        if (data.success) {
+            const faq = data.faq;
+            document.getElementById('modalTitle').textContent = '编辑 FAQ';
+            document.getElementById('faqId').value = faq.id;
+            document.getElementById('faqQuestion').value = faq.question;
+            document.getElementById('faqAnswer').value = faq.answer;
+            document.getElementById('faqCategory').value = faq.category || '';
+            document.getElementById('changeReasonGroup').style.display = 'block';
+
+            // Show confirm button for pending_review status
+            const confirmBtn = document.getElementById('confirmFaqBtn');
+            const saveBtn = document.getElementById('saveFaqBtn');
+            const progressContainer = document.getElementById('syncProgressContainer');
+
+            if (faq.status === 'pending_review') {
+                confirmBtn.style.display = 'block';
+                saveBtn.style.display = 'none';
+                progressContainer.style.display = 'none';
+            } else {
+                confirmBtn.style.display = 'none';
+                saveBtn.style.display = 'block';
+                progressContainer.style.display = 'none';
+            }
+
+            document.getElementById('faqModal').style.display = 'block';
+        }
+    } catch (err) {
+        console.error('Failed to load FAQ:', err);
+        alert('加载 FAQ 失败');
+    }
+}
+
+// Confirm FAQ from modal (with progress indicator)
+async function confirmFaqFromModal() {
+    const faqId = document.getElementById('faqId').value;
+    if (!faqId) return;
+
+    // Hide save button, show progress
+    document.getElementById('saveFaqBtn').style.display = 'none';
+    document.getElementById('confirmFaqBtn').style.display = 'none';
+    const progressContainer = document.getElementById('syncProgressContainer');
+    progressContainer.style.display = 'block';
+    const progressFill = document.getElementById('syncProgressFill');
+    const progressText = document.getElementById('syncProgressText');
+
+    try {
+        // Initial progress
+        progressFill.style.width = '0%';
+        progressText.textContent = '开始向量化...';
+
+        const resp = await fetch(`/api/faq/${faqId}/confirm`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await resp.json();
+
+        if (data.success) {
+            // Update progress to 100%
+            progressFill.style.width = '100%';
+            progressText.textContent = '100% - 向量化完成';
+
+            // Wait a moment to show completion
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            alert('FAQ 已确认并添加到知识库');
+            hideFaqModal();
+            loadFaqs(currentPage);
+        } else {
+            progressText.textContent = '向量化失败：' + (data.message || '未知错误');
+            progressFill.style.backgroundColor = '#ef4444';
+            alert(data.message || '确认失败');
+            // Reset buttons
+            document.getElementById('confirmFaqBtn').style.display = 'block';
+        }
+    } catch (err) {
+        console.error('Confirm error:', err);
+        progressText.textContent = '向量化失败';
+        progressFill.style.backgroundColor = '#ef4444';
+        alert('确认失败，请稍后重试');
+        // Reset buttons
+        document.getElementById('confirmFaqBtn').style.display = 'block';
+    }
+}
+
+// Save FAQ
+async function saveFaq() {
+    const faqId = document.getElementById('faqId').value;
+    const question = document.getElementById('faqQuestion').value.trim();
+    const answer = document.getElementById('faqAnswer').value.trim();
+    const category = document.getElementById('faqCategory').value.trim();
+    const changeReason = document.getElementById('changeReason').value.trim();
+
+    if (!question || !answer) {
+        alert('问题和答案为必填项');
+        return;
+    }
+
+    try {
+        const url = faqId ? `/api/faq/${faqId}` : '/api/faq';
+        const method = faqId ? 'PUT' : 'POST';
+
+        const resp = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                question,
+                answer,
+                category,
+                ...(changeReason && { change_reason: changeReason })
+            })
+        });
+
+        const data = await resp.json();
+
+        if (data.success) {
+            alert(faqId ? 'FAQ 已更新' : 'FAQ 已创建');
+            hideFaqModal();
+            loadFaqs(currentPage);
+        } else {
+            alert(data.message || '保存失败');
+        }
+    } catch (err) {
+        console.error('Save error:', err);
+        alert('保存失败');
+    }
+}
+
+// View versions
+async function viewVersions(faqId) {
+    try {
+        const resp = await fetch(`/api/faq/${faqId}/versions`);
+        const data = await resp.json();
+
+        if (data.success) {
+            const versionList = document.getElementById('versionList');
+            versionList.innerHTML = data.versions.map(v => `
+                <div class="version-item">
+                    <div class="version-header">
+                        <span class="version-time">
+                            <i class="fas fa-clock"></i>
+                            ${new Date(v.created_at).toLocaleString('zh-CN')}
+                        </span>
+                        <span class="version-changes">
+                            ${v.change_reason || '无修改说明'}
+                        </span>
+                    </div>
+                    <div class="version-content">
+                        <strong>问题：</strong>${escapeHtml(v.question)}<br><br>
+                        <strong>答案：</strong>${escapeHtml(v.answer)}
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('versionModal').style.display = 'block';
+        }
+    } catch (err) {
+        console.error('Failed to load versions:', err);
+        alert('加载版本历史失败');
+    }
+}
+
+// Hide version modal
+function hideVersionModal() {
+    document.getElementById('versionModal').style.display = 'none';
+}
+
+// Confirm delete FAQ
+function confirmDeleteFaq(faqId) {
+    faqToDelete = [faqId];
+    document.getElementById('deleteModal').style.display = 'block';
+}
+
+// Hide delete modal
+function hideDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    faqToDelete = null;
+}
+
+// Confirm delete
+async function confirmDelete() {
+    const ids = faqToDelete || selectedFaqs;
+
+    try {
+        const resp = await fetch('/api/faq/bulk-delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ faq_ids: ids })
+        });
+
+        const data = await resp.json();
+
+        if (data.success) {
+            alert(`成功删除 ${data.result.success} 个 FAQ`);
+            hideDeleteModal();
+            selectedFaqs = [];
+            document.getElementById('selectAll').checked = false;
+            document.getElementById('bulkActions').style.display = 'none';
+            loadFaqs(currentPage);
+        } else {
+            alert(data.message || '删除失败');
+        }
+    } catch (err) {
+        console.error('Delete error:', err);
+        alert('删除失败');
+    }
+}
+
+// Bulk delete
+function bulkDelete() {
+    if (selectedFaqs.length === 0) {
+        alert('请先选择要删除的 FAQ');
+        return;
+    }
+    faqToDelete = null; // Use selectedFaqs
+    document.getElementById('deleteModal').style.display = 'block';
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadFaqs();
+});
+</script>
+{% endblock %}
