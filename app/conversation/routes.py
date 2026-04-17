@@ -71,6 +71,11 @@ def send_message(conversation_id):
     try:
         from ..services.chat_memory_service import chat_memory_service
         chat_memory_service.add_record(conversation_id, sender_type, content)
+
+        # Increment round count for user messages (triggers handoff logic)
+        if sender_type == 'user':
+            from ..services.ticket_service import ticket_service
+            ticket_service.increment_round(conversation_id)
     except Exception as e:
         logger.warning(f'Failed to add to chat memory: {e}')
 
