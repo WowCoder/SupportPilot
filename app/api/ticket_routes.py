@@ -26,13 +26,11 @@ def get_ticket_status(session_id):
     """
     try:
         status, round_count = ticket_service.get_ticket_status(session_id)
-        should_show_handoff = ticket_service.should_show_handoff_button(session_id)
 
         return jsonify({
             'success': True,
             'status': status,
-            'round_count': round_count,
-            'should_show_handoff': should_show_handoff
+            'round_count': round_count
         })
     except Exception as e:
         logger.error(f'Error getting ticket status: {e}', exc_info=True)

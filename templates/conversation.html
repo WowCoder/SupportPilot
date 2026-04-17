@@ -136,7 +136,6 @@
 <script>
 const conversationId = {{ conversation.id }};
 let currentRound = 0;
-let shouldShowHandoff = false;
 
 // Load ticket status on page load
 async function loadTicketStatus() {
@@ -146,13 +145,12 @@ async function loadTicketStatus() {
 
         if (data.success) {
             currentRound = data.round_count;
-            shouldShowHandoff = data.should_show_handoff;
 
             // Update UI
             document.getElementById('currentRound').textContent = currentRound;
 
-            // Show handoff button if needed
-            if (shouldShowHandoff && data.status === 'open') {
+            // Show handoff button if ticket is open (always show, let user decide)
+            if (data.status === 'open') {
                 document.getElementById('handoffBtn').style.display = 'block';
             }
 

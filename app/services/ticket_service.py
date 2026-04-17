@@ -10,7 +10,6 @@ from typing import Optional, Tuple
 from ..extensions import db
 from ..models.support_ticket import SupportTicket
 from ..models.chat_memory import ChatMemory
-from ..config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +20,12 @@ class TicketService:
 
     Features:
     - Ticket lifecycle management (open → pending_human → closed)
-    - Round counting for human handoff trigger
+    - Round counting for tracking
     - Ticket status tracking
     """
 
     def __init__(self):
-        self.config = get_config()
-        self.handoff_threshold = getattr(self.config, 'HANDOFF_ROUND_THRESHOLD', 3)
+        pass
 
     def get_or_create_ticket(self, session_id: int) -> SupportTicket:
         """
@@ -75,29 +73,28 @@ class TicketService:
             ticket = self.get_or_create_ticket(session_id)
         return ticket.status, ticket.round_count
 
-    def increment_round(self, session_id: int) -> Tuple[int, bool]:
+    def increment_round(self, session_id: int) -> int:
         """
-        Increment conversation round count.
+        Increment conversation round count (for tracking purposes only).
 
         Args:
             session_id: Conversation session ID
 
         Returns:
-            Tuple of (new_round_count, should_show_handoff)
+            New round count
         """
         ticket = self.get_or_create_ticket(session_id)
 
         # Only count rounds for open tickets
         if ticket.status != 'open':
-            return ticket.round_count, False
+            return ticket.round_count
 
         ticket.increment_round()
         db.session.commit()
 
-        should_show_handoff = ticket.round_count >= self.handoff_threshold
-        logger.info(f'Incremented round count for session {session_id} to {ticket.round_count}, handoff={should_show_handoff}')
+        logger.info(f'Incremented round count for session {session_id} to {ticket.round_count}')
 
-        return ticket.round_count, should_show_handoff
+        return ticket.round_count
 
     def request_human_handoff(self, session_id: int) -> bool:
         """
@@ -160,22 +157,6 @@ class TicketService:
         db.session.commit()
         logger.info(f'Ticket {ticket.id} closed by {closed_by}')
         return True
-
-    def should_show_handoff_button(self, session_id: int) -> bool:
-        """
-        Check if human handoff button should be shown.
-
-        Args:
-            session_id: Conversation session ID
-
-        Returns:
-            True if button should be shown
-        """
-        ticket = self.get_ticket(session_id)
-        if not ticket:
-            return False
-
-        return ticket.is_open() and ticket.round_count >= self.handoff_threshold
 
 
 # Singleton instance
