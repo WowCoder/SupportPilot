@@ -11,9 +11,13 @@ import tempfile
 
 from rag.service import rag_service
 from rag.cleaning import document_cleaner, CleaningOptions
+from rag.rag_utils import RAGUtils
 
 logger = logging.getLogger(__name__)
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+# Initialize RAG utils for document processing
+rag_processor = RAGUtils()
 
 
 @api_bp.route('/document/count', methods=['GET'])
@@ -117,7 +121,7 @@ def preview_chunks():
             tmp_path = tmp_file.name
 
         # Preview chunks
-        result = rag_utils.preview_chunks(
+        result = rag_processor.preview_chunks(
             tmp_path,
             strategy=strategy,
             chunk_size=chunk_size,

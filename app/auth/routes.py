@@ -3,7 +3,7 @@ Authentication Blueprint for SupportPilot
 
 Handles user registration, login, and logout.
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import current_user, login_user, logout_user
 import logging
 
@@ -25,15 +25,21 @@ def register():
         email = request.form['email']
         password = request.form['password']
 
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
         # Validate username
         if len(username) < 3 or len(username) > 64:
             logger.warning(f'Registration failed: username {username} invalid length')
+            if is_ajax:
+                return jsonify({'success': False, 'message': '用户名长度必须在 3-64 个字符之间'})
             flash('Username must be between 3 and 64 characters')
             return redirect(url_for('auth.register'))
 
         # Validate email
         if not email or '@' not in email:
             logger.warning(f'Registration failed: invalid email {email}')
+            if is_ajax:
+                return jsonify({'success': False, 'message': '无效的邮箱地址'})
             flash('Invalid email address')
             return redirect(url_for('auth.register'))
 
@@ -41,17 +47,23 @@ def register():
         is_valid, message = User.validate_password_strength(password)
         if not is_valid:
             logger.warning(f'Registration failed: weak password for user {username}')
+            if is_ajax:
+                return jsonify({'success': False, 'message': message})
             flash(message)
             return redirect(url_for('auth.register'))
 
         # Check if username or email already exists
         if User.query.filter_by(username=username).first():
             logger.warning(f'Registration failed: username {username} already exists')
+            if is_ajax:
+                return jsonify({'success': False, 'message': '用户名已存在'})
             flash('Username already exists')
             return redirect(url_for('auth.register'))
 
         if User.query.filter_by(email=email).first():
             logger.warning(f'Registration failed: email {email} already exists')
+            if is_ajax:
+                return jsonify({'success': False, 'message': '邮箱已被使用'})
             flash('Email already exists')
             return redirect(url_for('auth.register'))
 
@@ -62,6 +74,8 @@ def register():
         db.session.commit()
 
         logger.info(f'User registered successfully: {username}')
+        if is_ajax:
+            return jsonify({'success': True, 'redirect': url_for('auth.login')})
         flash('Registration successful!')
         return redirect(url_for('auth.login'))
 

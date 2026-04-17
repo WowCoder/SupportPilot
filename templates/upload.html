@@ -2028,16 +2028,61 @@ function displayTestResults(results, query) {
 }
 
 // ========== Delete Modal ==========
+let currentDeleteDocId = null;
+
 window.confirmDelete = function(docId, filename) {
     $('deleteFilename') && ($('deleteFilename').textContent = filename);
-    const deleteForm = $('deleteForm');
-    if (deleteForm) deleteForm.action = `/document/${docId}/delete`;
+    currentDeleteDocId = docId;
     $('deleteModal') && ($('deleteModal').classList.add('active'));
 };
 
 window.closeDeleteModal = function() {
     $('deleteModal') && ($('deleteModal').classList.remove('active'));
+    currentDeleteDocId = null;
 };
+
+// Handle delete form submission via AJAX
+const deleteForm = $('deleteForm');
+if (deleteForm) {
+    deleteForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (!currentDeleteDocId) return;
+
+        const csrfToken = getCsrfToken();
+        const filename = $('deleteFilename')?.textContent || '';
+
+        try {
+            const resp = await fetch(`/document/${currentDeleteDocId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': csrfToken
+                }
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                flashMessage('success', `文档 "${filename}" 已删除`);
+                closeDeleteModal();
+                // Remove the document item from DOM
+                const docItem = document.getElementById(`doc-${currentDeleteDocId}`);
+                if (docItem) docItem.remove();
+                // Update document count
+                const totalDocsEl = $('totalDocs');
+                if (totalDocsEl) {
+                    const current = parseInt(totalDocsEl.textContent) || 0;
+                    totalDocsEl.textContent = Math.max(0, current - 1);
+                }
+            } else {
+                flashMessage('danger', data.message || '删除失败');
+            }
+        } catch (err) {
+            console.error('Delete error:', err);
+            flashMessage('danger', '删除失败');
+        }
+    });
+}
 
 if ($('deleteModal')) {
     $('deleteModal').addEventListener('click', e => {
