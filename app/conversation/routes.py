@@ -83,13 +83,10 @@ def send_message(conversation_id):
     conversation.message_count += 1
     conversation.last_message_at = message.timestamp
 
-    # Check if needs tech support intervention
-    if conversation.message_count >= 3 and conversation.status == 'active':
-        conversation.status = 'needs_attention'
-
     db.session.commit()
 
     # AI response if user is sending and conversation is active
+    # Note: AI will continue to respond until user manually requests human handoff
     if current_user.role == 'user' and conversation.status == 'active':
         try:
             # Get conversation context from chat memory
