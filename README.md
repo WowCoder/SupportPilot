@@ -99,13 +99,48 @@ SupportPilot/
 
 ### 1. 用户管理
 
+- 用户注册/登录/注销
+- 密码强度验证
+- 角色管理（普通用户 / 技术支持）
+
 ### 2. 会话管理
+
+- 创建新会话
+- 查看会话历史
+- 关闭/重新打开会话
+- 标记需关注会话
 
 ### 3. 智能客服
 
+- 基于 RAG 的智能问答
+- 查询改写（Query Rewriter）
+- 多路检索（向量 + BM25）
+- Cross-Encoder 重排序
+- Agentic RAG（LangGraph 状态机编排）
+
 ### 4. 文档管理
 
-### 5. 技术支持功能
+- 支持 PDF/TXT/DOCX 格式
+- 智能分块（语义/句子/递归策略）
+- 质量评分过滤
+- 数据清洗可视化
+- Small-to-Big 检索策略
+
+### 5. 工单管理系统（Ticket Management）
+
+- 工单状态跟踪（open/pending_human/closed）
+- 对话轮次计数
+- 人工介入触发（3 轮后显示按钮）
+- 用户关闭工单功能
+
+### 6. FAQ 管理与审核（FAQ Management & Review）
+
+- AI 自动生成 FAQ 草稿
+- 技术支持审核工作流（审核 → 编辑 → 确认 → 向量化）
+- FAQ 管理后台（增删改查、批量操作）
+- 版本历史记录
+- 向量化进度提示
+- ChromaDB 向量同步
 
 ---
 
@@ -476,6 +511,84 @@ FLASK_ENV=production gunicorn -c gunicorn_config.py wsgi:app
 
 - `GET /upload`：查看上传页面
 - `POST /upload`：上传文档
+
+### 工单管理 (Ticket Management)
+
+新增的工单管理功能，支持人工介入和工单状态跟踪。
+
+- `GET /api/ticket/<int:session_id>/status`
+  - 获取工单状态和对话轮数
+  - 返回：`{ success: true, status: 'open'|'pending_human'|'closed', round_count: number, should_show_handoff: boolean }`
+
+- `POST /api/ticket/<int:session_id>/handoff`
+  - 请求人工介入（用户点击"需要人工介入"按钮时调用）
+  - 返回：`{ success: true, message: '已请求人工介入...' }`
+
+- `POST /api/ticket/<int:session_id>/close`
+  - 关闭工单（用户或技术支持关闭会话时调用）
+  - Request Body: `{ generate_faq: boolean }` (可选，是否生成 FAQ)
+  - 返回：`{ success: true, message: '工单已关闭' }`
+
+### FAQ 管理 (FAQ Management)
+
+FAQ 管理后台和审核工作流 API。
+
+#### 审核工作流
+
+- `POST /api/faq/generate`
+  - 从对话生成 FAQ 草稿
+  - Request Body: `{ session_id: number }`
+  - 返回：`{ success: true, faq: { id, question, answer, category, status } }`
+
+- `POST /api/faq/<int:faq_id>/update`
+  - 更新 FAQ 草稿（技术支持审核时编辑）
+  - Request Body: `{ question: string, answer: string, category: string, change_reason: string }`
+  - 返回：`{ success: true }`
+
+- `POST /api/faq/<int:faq_id>/confirm`
+  - 确认 FAQ 并向量化到知识库
+  - 返回：`{ success: true, message: 'FAQ 已确认并添加到知识库', progress: 100 }`
+
+- `POST /api/faq/<int:faq_id>/reject`
+  - 拒绝 FAQ 草稿
+  - Request Body: `{ reason: string }` (可选)
+  - 返回：`{ success: true, message: 'FAQ 已拒绝' }`
+
+#### CRUD 操作
+
+- `GET /api/faq`
+  - 获取 FAQ 列表（支持分页和筛选）
+  - Query Params: `status`, `category`, `search`, `page`, `per_page`
+  - 返回：`{ success: true, items: [...], pagination: {...} }`
+
+- `GET /api/faq/<int:faq_id>`
+  - 获取单个 FAQ 详情
+  - 返回：`{ success: true, faq: {...} }`
+
+- `POST /api/faq`
+  - 创建新 FAQ
+  - Request Body: `{ question: string, answer: string, category: string, status: 'draft'|'confirmed' }`
+  - 返回：`{ success: true, faq: {...} }`
+
+- `PUT /api/faq/<int:faq_id>`
+  - 更新 FAQ
+  - Request Body: `{ question: string, answer: string, category: string, change_reason: string }`
+  - 返回：`{ success: true }`
+
+- `DELETE /api/faq/<int:faq_id>`
+  - 删除 FAQ（软删除）
+  - 返回：`{ success: true, message: 'FAQ 已删除' }`
+
+- `POST /api/faq/bulk-delete`
+  - 批量删除 FAQ
+  - Request Body: `{ faq_ids: number[] }`
+  - 返回：`{ success: true, result: { success: number, failed: number } }`
+
+#### 版本历史
+
+- `GET /api/faq/<int:faq_id>/versions`
+  - 获取 FAQ 版本历史
+  - 返回：`{ success: true, versions: [{ id, question, answer, change_reason, changed_by, created_at }] }`
 
 ## 测试
 
