@@ -49,21 +49,21 @@
     --font-text: 'SF Pro Text', 'SF Pro Icons', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
     --font-family: var(--font-text);
 
-    /* Font Sizes - from DESIGN.md */
-    --font-size-hero: 3.50rem;    /* 56px */
-    --font-size-section: 2.50rem; /* 40px */
-    --font-size-tile: 1.75rem;    /* 28px */
-    --font-size-card-title: 1.31rem; /* 21px */
-    --font-size-subheading: 1.31rem; /* 21px */
-    --font-size-nav-heading: 2.13rem; /* 34px */
-    --font-size-subnav: 1.50rem;  /* 24px */
-    --font-size-body: 1.06rem;    /* 17px */
-    --font-size-button: 1.06rem;  /* 17px */
-    --font-size-button-large: 1.13rem; /* 18px */
-    --font-size-link: 0.88rem;    /* 14px */
-    --font-size-caption: 0.88rem; /* 14px */
-    --font-size-micro: 0.75rem;   /* 12px */
-    --font-size-nano: 0.63rem;    /* 10px */
+    /* Font Sizes - Reduced for better UI (from DESIGN.md) */
+    --font-size-hero: 2.50rem;    /* 40px (was 56px) */
+    --font-size-section: 1.75rem; /* 28px (was 40px) */
+    --font-size-tile: 1.31rem;    /* 21px (was 28px) */
+    --font-size-card-title: 1.06rem; /* 17px (was 21px) */
+    --font-size-subheading: 1.06rem; /* 17px (was 21px) */
+    --font-size-nav-heading: 1.50rem; /* 24px (was 34px) */
+    --font-size-subnav: 1.06rem;  /* 17px (was 24px) */
+    --font-size-body: 0.94rem;    /* 15px (was 17px) */
+    --font-size-button: 0.94rem;  /* 15px (was 17px) */
+    --font-size-button-large: 1rem; /* 16px (was 18px) */
+    --font-size-link: 0.81rem;    /* 13px (was 14px) */
+    --font-size-caption: 0.81rem; /* 13px (was 14px) */
+    --font-size-micro: 0.69rem;   /* 11px (was 12px) */
+    --font-size-nano: 0.56rem;    /* 9px (was 10px) */
 
     /* Font Weights */
     --font-weight-light: 300;
@@ -157,6 +157,11 @@ body {
     letter-spacing: var(--letter-spacing-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    padding-top: var(--nav-height);
+}
+
+main {
+    padding-top: var(--spacing-24);
 }
 
 /* ========================================
@@ -993,8 +998,9 @@ a:hover {
    ======================================== */
 @media (max-width: 768px) {
     :root {
-        --font-size-hero: 2.50rem;  /* 40px */
-        --font-size-section: 1.75rem; /* 28px */
+        --font-size-hero: 1.75rem;  /* 28px */
+        --font-size-section: 1.31rem; /* 21px */
+        --font-size-tile: 1.06rem; /* 17px */
     }
 
     .container {
