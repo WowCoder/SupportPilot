@@ -14,12 +14,18 @@
     --sk-focus-color: #0071e3;
     --sk-body-link-color: #0066cc;
     --sk-bright-blue: #2997ff;
+    --sk-link-hover: #0055a1;
+    --sk-link-hover-dark: #5aabff;
 
     /* Text Colors */
     --sk-white: #ffffff;
     --sk-text-primary: #1d1d1f;
     --sk-text-secondary: rgba(0, 0, 0, 0.8);
     --sk-text-tertiary: rgba(0, 0, 0, 0.48);
+    --sk-text-error: #991b1b;
+    --sk-text-success: #065f46;
+    --sk-text-warning: #92400e;
+    --sk-text-info: #1e40af;
 
     /* Dark Surface Colors */
     --sk-dark-surface-1: #272729;
@@ -31,6 +37,10 @@
     /* Button States */
     --sk-button-active: #ededf2;
     --sk-button-default-light: #fafafc;
+    --sk-button-primary-hover: #0077ed;
+    --sk-button-dark-hover: #2d2d2f;
+    --sk-button-secondary-hover: #e8e8ed;
+    --sk-button-filter-hover: #f0f0f5;
     --sk-overlay-color: rgba(210, 210, 215, 0.64);
     --sk-white-32: rgba(255, 255, 255, 0.32);
 
@@ -39,10 +49,17 @@
     --sk-warning: #ff9500;
     --sk-error: #ff3b30;
 
+    /* Border Colors */
+    --sk-border-color: #d2d2d7;
+    --sk-border-light: rgba(0, 0, 0, 0.05);
+    --sk-border-hover: #a1a1a6;
+
     /* Background Colors */
     --bg-primary: #f5f5f7;
     --bg-card: #ffffff;
     --bg-dark: #000000;
+    --bg-auth-gradient-start: #f5f5f7;
+    --bg-auth-gradient-end: #e8e8ed;
 
     /* Typography - Font Families (DESIGN.md Section 3) */
     --font-display: 'SF Pro Display', 'SF Pro Icons', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
@@ -290,7 +307,7 @@ a {
 }
 
 a:hover {
-    color: #0055a1;
+    color: var(--sk-link-hover);
     text-decoration: underline;
 }
 
@@ -300,7 +317,7 @@ a:hover {
 }
 
 .dark-section a:hover {
-    color: #5aabff;
+    color: var(--sk-link-hover-dark);
 }
 
 /*正文样式 */
@@ -353,7 +370,7 @@ p {
 }
 
 .btn-primary:hover:not(:disabled) {
-    background-color: #0077ed;
+    background-color: var(--sk-button-primary-hover);
     transform: scale(1.02);
 }
 
@@ -374,7 +391,7 @@ p {
 }
 
 .btn-dark:hover:not(:disabled) {
-    background-color: #2d2d2f;
+    background-color: var(--sk-button-dark-hover);
 }
 
 /* Secondary / Light */
@@ -386,7 +403,7 @@ p {
 }
 
 .btn-secondary:hover:not(:disabled) {
-    background-color: #e8e8ed;
+    background-color: var(--sk-button-secondary-hover);
 }
 
 /* Outline */
@@ -434,7 +451,7 @@ p {
 }
 
 .btn-filter:hover {
-    background-color: #f0f0f5;
+    background-color: var(--sk-button-filter-hover);
 }
 
 .btn-filter:focus {
@@ -446,6 +463,8 @@ p {
 .btn-sm {
     padding: var(--spacing-5) var(--spacing-10);
     font-size: var(--font-size-micro);
+    border-radius: var(--radius-standard);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .btn-lg {
@@ -493,7 +512,7 @@ p {
 .btn-outline {
     background-color: transparent;
     color: var(--sk-text-primary);
-    border: 1px solid #d2d2d7;
+    border: 1px solid var(--sk-border-color);
 }
 
 .btn-outline:hover:not(:disabled) {
@@ -548,7 +567,7 @@ p {
     font-size: var(--font-size-body);
     color: var(--sk-text-primary);
     background-color: var(--sk-white);
-    border: 1px solid #d2d2d7;
+    border: 1px solid var(--sk-border-color);
     border-radius: var(--radius-standard);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     letter-spacing: var(--letter-spacing-body);
@@ -557,7 +576,7 @@ p {
 .form-input:hover,
 .form-textarea:hover,
 .form-select:hover {
-    border-color: #a1a1a6;
+    border-color: var(--sk-border-hover);
 }
 
 .form-input:focus,
@@ -675,25 +694,25 @@ input[type="radio"] {
 .flash-message.error,
 .flash-message.danger {
     background-color: rgba(255, 59, 48, 0.1);
-    color: #991b1b;
+    color: var(--sk-text-error);
     border: 1px solid rgba(255, 59, 48, 0.2);
 }
 
 .flash-message.success {
     background-color: rgba(52, 199, 89, 0.1);
-    color: #065f46;
+    color: var(--sk-text-success);
     border: 1px solid rgba(52, 199, 89, 0.2);
 }
 
 .flash-message.warning {
     background-color: rgba(255, 149, 0, 0.1);
-    color: #92400e;
+    color: var(--sk-text-warning);
     border: 1px solid rgba(255, 149, 0, 0.2);
 }
 
 .flash-message.info {
     background-color: rgba(0, 113, 227, 0.1);
-    color: #1e40af;
+    color: var(--sk-text-info);
     border: 1px solid rgba(0, 113, 227, 0.2);
 }
 
@@ -1137,12 +1156,12 @@ input[type="radio"] {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #d2d2d7;
+    background: var(--sk-border-color);
     border-radius: var(--radius-pill);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #86868b;
+    background: var(--sk-text-secondary);
 }
 
 /* ========================================
@@ -1352,6 +1371,6 @@ input[type="radio"] {
 
     .card {
         box-shadow: none;
-        border: 1px solid #d2d2d7;
+        border: 1px solid var(--sk-border-color);
     }
 }

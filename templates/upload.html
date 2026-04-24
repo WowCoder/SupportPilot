@@ -516,11 +516,11 @@
                     <div class="document-info">
                         <div class="document-name">
                             {% if doc.filename.endswith('.pdf') %}
-                                <i class="fas fa-file-pdf document-icon" style="color: #ef4444;"></i>
+                                <i class="fas fa-file-pdf document-icon" style="color: var(--sk-error);"></i>
                             {% elif doc.filename.endswith('.docx') or doc.filename.endswith('.doc') %}
-                                <i class="fas fa-file-word document-icon" style="color: #3b82f6;"></i>
+                                <i class="fas fa-file-word document-icon" style="color: var(--sk-focus-color);"></i>
                             {% elif doc.filename.endswith('.txt') %}
-                                <i class="fas fa-file-alt document-icon" style="color: #6b7280;"></i>
+                                <i class="fas fa-file-alt document-icon" style="color: var(--sk-text-secondary);"></i>
                             {% else %}
                                 <i class="fas fa-file document-icon"></i>
                             {% endif %}
@@ -598,14 +598,14 @@
         align-items: center;
         justify-content: center;
         gap: 0;
-        margin-bottom: var(--spacing-6);
+        margin-bottom: var(--spacing-24);
     }
 
     .step {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: var(--spacing-2);
+        gap: var(--spacing-8);
         opacity: 0.5;
         transition: all var(--transition-normal);
     }
@@ -614,51 +614,53 @@
     .step.completed { opacity: 1; }
 
     .step.completed .step-number {
-        background-color: var(--color-success);
-        border-color: var(--color-success);
+        background-color: var(--sk-success);
+        border-color: var(--sk-success);
         color: white;
     }
 
     .step.active .step-number {
-        background-color: var(--color-primary);
-        border-color: var(--color-primary);
+        background-color: var(--sk-focus-color);
+        border-color: var(--sk-focus-color);
         color: white;
     }
 
     .step-number {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: 2px solid var(--color-gray-300);
-        background-color: var(--color-white);
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-circle);
+        border: 2px solid var(--sk-border-color);
+        background-color: var(--sk-white);
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: var(--font-weight-semibold);
-        color: var(--color-gray-500);
+        font-size: var(--font-size-micro);
+        color: var(--sk-text-secondary);
         transition: all var(--transition-normal);
     }
 
     .step-label {
-        font-size: var(--font-size-sm);
-        color: var(--color-gray-500);
+        font-size: var(--font-size-micro);
+        color: var(--sk-text-secondary);
         font-weight: var(--font-weight-medium);
     }
 
-    .step.active .step-label { color: var(--color-primary); }
+    .step.active .step-label { color: var(--sk-focus-color); }
+    .step.completed .step-label { color: var(--sk-success); }
 
     .step-line {
         flex: 1;
         height: 2px;
-        background-color: var(--color-gray-200);
-        min-width: 40px;
-        max-width: 100px;
-        margin: 0 var(--spacing-2);
-        margin-bottom: 24px;
+        background-color: var(--sk-border-color);
+        min-width: 30px;
+        max-width: 80px;
+        margin: 0 var(--spacing-8);
+        margin-bottom: 12px;
         transition: background-color var(--transition-normal);
     }
 
-    .step-line.active { background-color: var(--color-primary); }
+    .step-line.active { background-color: var(--sk-focus-color); }
 
     /* Wizard Steps */
     .wizard-step { animation: fadeIn 0.3s ease; }
@@ -669,43 +671,43 @@
     }
 
     .step-title {
-        font-size: var(--font-size-xl);
+        font-size: var(--font-size-card-title);
         font-weight: var(--font-weight-semibold);
-        color: var(--color-gray-800);
-        margin-bottom: var(--spacing-2);
+        color: var(--sk-text-primary);
+        margin-bottom: var(--spacing-8);
     }
 
     .step-desc {
-        color: var(--color-gray-500);
-        margin-bottom: var(--spacing-6);
+        color: var(--sk-text-secondary);
+        margin-bottom: var(--spacing-20);
     }
 
     .step-actions {
         display: flex;
-        gap: var(--spacing-3);
+        gap: var(--spacing-10);
         flex-wrap: wrap;
     }
 
     /* Upload Area */
     .upload-area {
-        border: 3px dashed var(--color-gray-300);
-        border-radius: var(--radius-xl);
-        padding: var(--spacing-10);
+        border: 2px dashed var(--sk-border-color);
+        border-radius: var(--radius-large);
+        padding: var(--spacing-24);
         text-align: center;
-        background-color: var(--color-gray-50);
+        background-color: var(--sk-light-gray);
         transition: all var(--transition-normal);
         cursor: pointer;
         position: relative;
     }
 
     .upload-area:hover, .upload-area.drag-over {
-        border-color: var(--color-primary);
-        background-color: var(--color-primary-bg);
+        border-color: var(--sk-focus-color);
+        background-color: rgba(0, 113, 227, 0.05);
     }
 
-    .upload-icon { font-size: 48px; color: var(--color-gray-400); margin-bottom: var(--spacing-4); }
-    .upload-title { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); color: var(--color-gray-700); margin-bottom: var(--spacing-2); }
-    .upload-hint { color: var(--color-gray-500); font-size: var(--font-size-sm); }
+    .upload-icon { font-size: 48px; color: var(--sk-text-tertiary); margin-bottom: var(--spacing-17); }
+    .upload-title { font-size: var(--font-size-card-title); font-weight: var(--font-weight-semibold); color: var(--sk-text-primary); margin-bottom: var(--spacing-8); }
+    .upload-hint { color: var(--sk-text-secondary); font-size: var(--font-size-micro); }
 
     .drop-zone-input {
         position: absolute;
@@ -719,45 +721,46 @@
     .file-info-card {
         display: flex;
         align-items: center;
-        gap: var(--spacing-4);
-        padding: var(--spacing-4);
-        background-color: var(--color-primary-bg);
-        border: 1px solid var(--color-primary);
-        border-radius: var(--radius-lg);
-        margin-top: var(--spacing-4);
+        gap: var(--spacing-17);
+        padding: var(--spacing-17);
+        background-color: rgba(0, 113, 227, 0.05);
+        border: 1px solid var(--sk-focus-color);
+        border-radius: var(--radius-large);
+        margin-top: var(--spacing-20);
     }
 
     .file-icon {
         width: 48px; height: 48px;
-        background-color: var(--color-white);
-        border-radius: var(--radius-md);
+        background-color: var(--sk-white);
+        border-radius: var(--radius-standard);
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 24px;
-        color: #ef4444;
+        color: var(--sk-warning);
     }
 
     .file-details { flex: 1; }
-    .file-name { font-weight: var(--font-weight-semibold); color: var(--color-gray-800); }
-    .file-meta { font-size: var(--font-size-sm); color: var(--color-gray-500); }
+    .file-name { font-weight: var(--font-weight-semibold); color: var(--sk-text-primary); font-size: var(--font-size-body); }
+    .file-meta { font-size: var(--font-size-micro); color: var(--sk-text-secondary); }
 
     /* Cards */
     .cleaning-options-card, .comparison-card, .metadata-card,
     .chunk-settings-card, .chunk-preview-card, .confirm-summary-card, .upload-progress-card {
-        background-color: var(--color-gray-50);
-        border-radius: var(--radius-lg);
-        padding: var(--spacing-4);
+        background-color: var(--sk-light-gray);
+        border-radius: var(--radius-large);
+        padding: var(--spacing-20);
+        border: 1px solid rgba(0, 0, 0, 0.05);
     }
 
     .card-section-title {
-        font-size: var(--font-size-base);
+        font-size: var(--font-size-body);
         font-weight: var(--font-weight-semibold);
-        color: var(--color-gray-700);
-        margin-bottom: var(--spacing-3);
+        color: var(--sk-text-primary);
+        margin-bottom: var(--spacing-14);
         display: flex;
         align-items: center;
-        gap: var(--spacing-2);
+        gap: var(--spacing-8);
     }
 
     /* Options Grid */

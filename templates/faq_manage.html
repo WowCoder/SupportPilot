@@ -196,9 +196,9 @@
             <span class="modal-close" onclick="hideDeleteModal()">&times;</span>
         </div>
         <div class="modal-body text-center">
-            <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #f59e0b; margin-bottom: 16px;"></i>
+            <i class="fas fa-exclamation-triangle delete-warning-icon"></i>
             <p>确定要删除选中的 FAQ 吗？</p>
-            <p style="color: #666; font-size: 14px;">此操作将同时从知识库中移除相关条目</p>
+            <p class="delete-warning-subtext">此操作将同时从知识库中移除相关条目</p>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">取消</button>
@@ -422,17 +422,17 @@
 .hidden { display: none; }
 
 .version-changes {
-    font-size: 13px;
-    color: #374151;
+    font-size: var(--font-size-micro);
+    color: var(--sk-text-primary);
 }
 
 .version-content {
-    font-size: 14px;
+    font-size: var(--font-size-small);
     line-height: 1.6;
 }
 
 .version-content strong {
-    color: #111827;
+    color: var(--sk-text-primary);
 }
 
 .text-center {
@@ -440,52 +440,64 @@
 }
 
 .required {
-    color: #ef4444;
+    color: var(--sk-error);
+}
+
+.delete-warning-icon {
+    font-size: 48px;
+    color: var(--sk-warning);
+    margin-bottom: var(--spacing-17);
+    display: block;
+}
+
+.delete-warning-subtext {
+    color: var(--sk-text-secondary);
+    font-size: var(--font-size-small);
 }
 
 /* Sync progress bar */
 .sync-progress-container {
-    margin-top: 20px;
-    padding: 16px;
-    background: #f3f4f6;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
+    margin-top: var(--spacing-24);
+    padding: var(--spacing-17);
+    background: var(--sk-light-gray);
+    border-radius: var(--radius-standard);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .sync-progress-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    color: #374151;
-    font-weight: 500;
+    gap: var(--spacing-8);
+    margin-bottom: var(--spacing-12);
+    color: var(--sk-text-primary);
+    font-weight: var(--font-weight-medium);
 }
 
 .sync-progress-header i {
-    color: #667eea;
+    color: var(--sk-focus-color);
 }
 
 .progress-bar {
     width: 100%;
     height: 8px;
-    background: #e5e7eb;
-    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-small);
     overflow: hidden;
-    margin-bottom: 8px;
+    margin-bottom: var(--spacing-8);
 }
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    transition: width 0.3s ease;
-    border-radius: 4px;
+    background: var(--sk-focus-color);
+    transition: width var(--transition-normal);
+    border-radius: var(--radius-small);
 }
 
 .sync-progress-text {
     text-align: right;
-    font-size: 13px;
-    color: #666;
-    font-weight: 500;
+    font-size: var(--font-size-micro);
+    color: var(--sk-text-secondary);
+    font-weight: var(--font-weight-medium);
 }
 </style>
 {% endblock %}
@@ -547,10 +559,10 @@ function renderFaqTable(items) {
                        onchange="updateSelectedCount()">
             </td>
             <td style="max-width: 300px;">
-                <div style="font-weight: 500; color: #111827;">${escapeHtml(faq.question)}</div>
+                <div style="font-weight: var(--font-weight-medium); color: var(--sk-text-primary);">${escapeHtml(faq.question)}</div>
             </td>
             <td style="max-width: 400px;">
-                <div style="color: #666; font-size: 14px; max-height: 60px; overflow: hidden;">
+                <div style="color: var(--sk-text-secondary); font-size: var(--font-size-small); max-height: 60px; overflow: hidden;">
                     ${escapeHtml(faq.answer.substring(0, 100))}${faq.answer.length > 100 ? '...' : ''}
                 </div>
             </td>
@@ -560,7 +572,7 @@ function renderFaqTable(items) {
                     ${getStatusText(faq.status)}
                 </span>
             </td>
-            <td style="font-size: 13px; color: #666;">
+            <td style="font-size: var(--font-size-micro); color: var(--sk-text-secondary);">
                 ${faq.created_at ? new Date(faq.created_at).toLocaleString('zh-CN') : '-'}
             </td>
             <td>
@@ -749,7 +761,7 @@ async function confirmFaqFromModal() {
             loadFaqs(currentPage);
         } else {
             progressText.textContent = '向量化失败：' + (data.message || '未知错误');
-            progressFill.style.backgroundColor = '#ef4444';
+            progressFill.style.backgroundColor = 'var(--sk-error)';
             alert(data.message || '确认失败');
             // Reset buttons
             document.getElementById('confirmFaqBtn').style.display = 'block';
@@ -757,7 +769,7 @@ async function confirmFaqFromModal() {
     } catch (err) {
         console.error('Confirm error:', err);
         progressText.textContent = '向量化失败';
-        progressFill.style.backgroundColor = '#ef4444';
+        progressFill.style.backgroundColor = 'var(--sk-error)';
         alert('确认失败，请稍后重试');
         // Reset buttons
         document.getElementById('confirmFaqBtn').style.display = 'block';
