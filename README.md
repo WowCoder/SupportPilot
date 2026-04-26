@@ -1,8 +1,72 @@
 # SupportPilot
 
-## 项目简介
+<div align="center">
 
-SupportPilot 是一个基于 Flask 的智能客户支持系统，使用了 RAG (Retrieval-Augmented Generation) 技术和 LLM 来实现智能客服功能。该系统支持用户与 AI 助手进行对话，当对话需要人工介入时，技术支持人员可以接管对话。
+![SupportPilot Banner](https://img.shields.io/badge/SupportPilot-AI%20Customer%20Support-0071e3?style=for-the-badge)
+
+**基于 Flask + RAG 的智能客服系统 · Apple 风格现代化 UI**
+
+[Features](#-功能特性) · [Screenshots](#-界面预览) · [Architecture](#-技术架构) · [Quick Start](#-快速开始)
+
+</div>
+
+---
+
+## 📸 界面预览
+
+### 登录页面
+
+![Login Page](./docs/screenshots/06-login.png)
+
+*简洁的登录界面，支持用户名密码认证*
+
+### 注册页面
+
+![Register Page](./docs/screenshots/07-register.png)
+
+*用户注册页面，包含密码强度验证*
+
+### 仪表盘首页
+
+![Dashboard](./docs/screenshots/01-home.png)
+
+*现代化仪表盘，展示会话统计和快捷操作*
+
+### 上传页面
+
+![Upload](./docs/screenshots/02-upload.png)
+
+*文档上传向导，支持数据清洗和分块预览*
+
+### 会话对话页面（Apple iMessage 风格）
+
+![Conversation](./docs/screenshots/05-conversation-chat.png)
+
+*iMessage 风格的对话界面，支持流畅的消息气泡和滚动体验*
+
+---
+
+## ✨ 功能特性
+
+### Apple 风格设计系统
+
+- **iMessage 灵感设计**: 对话气泡采用 Apple iMessage 风格，圆角 + 阴影
+- **SF Pro 字体**: 使用 Apple 系统字体栈，呈现原生质感
+- **流畅动画**: 消息进入/发送按钮/滚动到底部按钮均带流畅动画
+- **固定式布局**: 头部和输入框固定，仅消息区域可滚动
+- **玻璃拟态**: 半透明背景 + backdrop-filter 模糊效果
+
+### 核心功能
+
+| 功能模块 | 说明 |
+|---------|------|
+| 👤 用户管理 | 注册/登录/注销，密码强度验证，角色管理 |
+| 💬 会话管理 | 创建/关闭/重开会话，标记需关注 |
+| 🤖 智能客服 | RAG 检索 + Qwen LLM 生成，Cross-Encoder 重排序 |
+| 📁 文档管理 | PDF/TXT/DOCX 上传，语义分块，Small-to-Big 检索 |
+| 🎫 工单系统 | 人工介入触发，状态跟踪（open/pending/closed） |
+| 📚 FAQ 管理 | AI 生成草稿，审核工作流，向量化同步 |
+
 
 ## 技术栈
 
