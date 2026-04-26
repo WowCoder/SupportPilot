@@ -16,31 +16,31 @@
 
 ### 登录页面
 
-![Login Page](./docs/screenshots/06-login.png)
+![Login Page](./docs/screenshots/login.png)
 
 *简洁的登录界面，支持用户名密码认证*
 
 ### 注册页面
 
-![Register Page](./docs/screenshots/07-register.png)
+![Register Page](./docs/screenshots/register.png)
 
 *用户注册页面，包含密码强度验证*
 
 ### 仪表盘首页
 
-![Dashboard](./docs/screenshots/01-home.png)
+![Dashboard](./docs/screenshots/home.png)
 
 *现代化仪表盘，展示会话统计和快捷操作*
 
 ### 上传页面
 
-![Upload](./docs/screenshots/02-upload.png)
+![Upload](./docs/screenshots/upload.png)
 
 *文档上传向导，支持数据清洗和分块预览*
 
 ### 会话对话页面（Apple iMessage 风格）
 
-![Conversation](./docs/screenshots/05-conversation-chat.png)
+![Conversation](./docs/screenshots/conversation-chat.png)
 
 *iMessage 风格的对话界面，支持流畅的消息气泡和滚动体验*
 
