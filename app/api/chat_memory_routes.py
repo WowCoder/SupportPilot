@@ -271,7 +271,7 @@ def list_faq():
     page = request.args.get('page', type=int, default=1)
     per_page = request.args.get('per_page', type=int, default=20)
 
-    pagination = FAQEntry.query.filter_by(is_duplicate=False).order_by(
+    pagination = FAQEntry.query.filter_by(status='confirmed').order_by(
         FAQEntry.created_at.desc()
     ).paginate(page=page, per_page=per_page, error_out=False)
 

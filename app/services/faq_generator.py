@@ -137,8 +137,6 @@ class FAQGenerator:
         Returns:
             List of {'question': str, 'answer': str} dicts
         """
-        from api.qwen_api import qwen_api
-
         system_prompt = """你是一个 FAQ 提取专家。你的任务是从客服对话中提取高质量的 Q&A 对。
 
 规则：
@@ -235,8 +233,8 @@ class FAQGenerator:
         if threshold is None:
             threshold = self.similarity_threshold
 
-        # Get all existing FAQs
-        existing_faqs = FAQEntry.query.filter_by(is_duplicate=False).all()
+        # Get all confirmed FAQs (non-duplicate equivalents)
+        existing_faqs = FAQEntry.query.filter_by(status='confirmed').all()
 
         if not existing_faqs:
             return False, None
@@ -295,10 +293,10 @@ class FAQGenerator:
         db.session.add(faq)
         db.session.flush()  # Get ID
 
-        # Add to ChromaDB
+        # Save to ChromaDB
         try:
             content = f"Q: {question}\nA: {answer}"
-            doc_id = chroma_doc_id or f"faq_{faq.id}_{hashlib.md5(question.encode()).hexdigest()[:16]}"
+            doc_id = chroma_doc_id or f"faq_{faq.id}_{hashlib.sha256(question.encode()).hexdigest()[:16]}"
 
             rag_utils.collection.add(
                 documents=[content],
@@ -311,8 +309,8 @@ class FAQGenerator:
                 }]
             )
 
-            faq.chroma_doc_id = doc_id
-            faq.mark_as_unique(chroma_doc_id=doc_id)
+            # Sync to FAQEntry via chroma_doc_ids (JSON) + mark confirmed
+            faq.mark_as_confirmed(user_id=faq.created_by, chroma_doc_ids=[doc_id])
 
             db.session.commit()
 
@@ -341,10 +339,11 @@ class FAQGenerator:
             return False
 
         # Remove from ChromaDB
-        if faq.chroma_doc_id:
+        chroma_ids = faq.get_chroma_doc_ids()
+        if chroma_ids:
             try:
-                rag_utils.collection.delete(ids=[faq.chroma_doc_id])
-                logger.info(f'Deleted FAQ {faq_id} from ChromaDB (doc_id: {faq.chroma_doc_id})')
+                rag_utils.collection.delete(ids=chroma_ids)
+                logger.info(f'Deleted FAQ {faq_id} from ChromaDB (doc_ids: {chroma_ids})')
             except Exception as e:
                 logger.error(f'Failed to delete from ChromaDB: {e}')
 

@@ -46,13 +46,11 @@ class FAQReviewService:
             FAQEntry in 'pending_review' status, or None if failed
         """
         try:
-            # Get conversation
             conversation = Conversation.query.get(session_id)
             if not conversation:
                 logger.error(f'No conversation found for session {session_id}')
                 return None
 
-            # Get chat history
             chat_records = ChatMemory.query.filter_by(
                 session_id=session_id
             ).order_by(ChatMemory.created_at.asc()).limit(20).all()
@@ -61,20 +59,17 @@ class FAQReviewService:
                 logger.error(f'No chat records found for session {session_id}')
                 return None
 
-            # Build conversation text for AI
             conversation_text = '\n'.join([
                 f"{r.sender_type}: {r.content}"
                 for r in chat_records
             ])
 
-            # TODO: Use LLM to generate FAQ from conversation
-            # For now, create a placeholder FAQ
-            # In production, this would call an LLM to extract Q&A
+            # Extract Q&A using Qwen API
+            question, answer = self._extract_qa_from_conversation(conversation_text)
+            if not question or not answer:
+                logger.warning(f'Failed to extract Q&A from session {session_id}')
+                return None
 
-            question = f"关于对话 {session_id} 的问题"
-            answer = f"这是基于对话生成的答案草稿"
-
-            # Create FAQ entry
             faq = FAQEntry(
                 question=question,
                 answer=answer,
@@ -93,6 +88,65 @@ class FAQReviewService:
             logger.error(f'Error generating FAQ draft: {e}', exc_info=True)
             db.session.rollback()
             return None
+
+    def _extract_qa_from_conversation(self, conversation_text: str):
+        """Extract Q&A from conversation using LLM. Returns (question, answer) tuple."""
+        import os
+        import requests
+
+        api_key = os.environ.get('QWEN_API_KEY')
+        if not api_key:
+            logger.warning('QWEN_API_KEY not configured, using fallback extraction')
+            return self._fallback_extraction(conversation_text)
+
+        api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        data = {
+            "model": "qwen-turbo",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "你是一个FAQ提取专家。从客服对话中提取一个核心问答对。规则：1.问题应简洁明确；2.答案应准确完整；3.去除客套话；4.输出必须为JSON格式：{\"question\": \"...\", \"answer\": \"...\"}"
+                },
+                {
+                    "role": "user",
+                    "content": f"请从以下对话中提取FAQ：\n\n{conversation_text}"
+                }
+            ],
+            "temperature": 0.3,
+            "max_tokens": 1024
+        }
+
+        try:
+            response = requests.post(api_url, headers=headers, json=data, timeout=30)
+            response.raise_for_status()
+            result = response.json()
+
+            if 'choices' in result and len(result['choices']) > 0:
+                import json
+                import re
+                content = result['choices'][0]['message']['content'].strip()
+                json_match = re.search(r'\{.*\}', content, re.DOTALL)
+                if json_match:
+                    parsed = json.loads(json_match.group())
+                    return parsed.get('question', ''), parsed.get('answer', '')
+        except Exception as e:
+            logger.warning(f'LLM FAQ extraction failed: {e}, using fallback')
+
+        return self._fallback_extraction(conversation_text)
+
+    def _fallback_extraction(self, conversation_text: str):
+        """Simple fallback: take first user question as Q, last AI answer as A."""
+        lines = conversation_text.split('\n')
+        questions = [l.replace('user: ', '') for l in lines if l.startswith('user: ')]
+        answers = [l.replace('ai: ', '') for l in lines if l.startswith('ai: ')]
+
+        question = questions[0] if questions else ''
+        answer = answers[-1] if answers else ''
+        return question, answer
 
     def update_faq_draft(self, faq_id: int, question: str, answer: str,
                          category: str, user_id: int, change_reason: str = None) -> bool:
