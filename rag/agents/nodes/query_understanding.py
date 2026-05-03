@@ -116,50 +116,18 @@ class QueryUnderstandingNode:
 请改写 query（如果不需要改写，返回原 query）："""
 
         try:
-            import requests
-            import os
+            from api.llm_client import llm_client
 
-            api_key = os.environ.get('QWEN_API_KEY')
-            if not api_key:
-                logger.warning('QWEN_API_KEY not configured')
-                return None
-
-            api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}"
-            }
-
-            data = {
-                "model": "qwen-turbo",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": 0.3,
-                "max_tokens": 256
-            }
-
-            response = requests.post(
-                api_url,
-                headers=headers,
-                json=data,
-                timeout=self.timeout_seconds
-            )
-            response.raise_for_status()
-            result = response.json()
-
-            if 'choices' in result and len(result['choices']) > 0:
-                rewritten = result['choices'][0]['message']['content'].strip().strip('"\'').strip()
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+            rewritten = llm_client.generate(messages, temperature=0.3, max_tokens=256)
+            if rewritten and not rewritten.startswith("抱歉"):
+                rewritten = rewritten.strip().strip('"\'').strip()
                 return rewritten if rewritten and rewritten != query else None
-            else:
-                logger.warning(f'Unexpected API response format: {result}')
-                return None
-
-        except requests.exceptions.Timeout:
-            logger.warning(f'Query rewrite timeout ({self.timeout_seconds}s)')
             return None
+
         except Exception as e:
             logger.warning(f'Query rewrite failed: {e}')
             return None

@@ -26,7 +26,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
 
     # Qwen API
-    QWEN_API_KEY: Optional[str] = None
+    LLM_API_KEY: Optional[str] = None
 
     # File upload
     UPLOAD_FOLDER: str = 'uploads'
@@ -69,9 +69,9 @@ class ProductionConfig(Config):
             raise ValueError("SECRET_KEY environment variable must be set in production")
 
         self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
-        self.QWEN_API_KEY = os.environ.get('QWEN_API_KEY')
-        if not self.QWEN_API_KEY:
-            raise ValueError("QWEN_API_KEY environment variable must be set in production")
+        self.LLM_API_KEY = os.environ.get('LLM_API_KEY') or os.environ.get('QWEN_API_KEY')
+        if not self.LLM_API_KEY:
+            raise ValueError("LLM_API_KEY environment variable must be set in production")
 
         # Production security settings
         self.SESSION_COOKIE_SECURE = True
@@ -86,9 +86,9 @@ class DevelopmentConfig(Config):
     def __init__(self):
         self.SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
         self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///app.db'
-        self.QWEN_API_KEY = os.environ.get('QWEN_API_KEY')
-        if not self.QWEN_API_KEY:
-            raise ValueError("QWEN_API_KEY environment variable must be set")
+        self.LLM_API_KEY = os.environ.get('LLM_API_KEY') or os.environ.get('QWEN_API_KEY')
+        if not self.LLM_API_KEY:
+            raise ValueError("LLM_API_KEY environment variable must be set")
 
 
 class TestingConfig(Config):
@@ -99,7 +99,7 @@ class TestingConfig(Config):
     def __init__(self):
         self.SECRET_KEY = 'test-secret-key-for-testing'
         self.SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
-        self.QWEN_API_KEY = 'test-api-key'
+        self.LLM_API_KEY = 'test-api-key'
         self.UPLOAD_FOLDER = 'test_uploads'
         self.WTF_CSRF_ENABLED = False  # Disable CSRF for testing
 

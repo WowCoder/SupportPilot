@@ -156,64 +156,29 @@ class FAQGenerator:
 
         try:
             import json
-            import os
-            import requests
+            import re
+            from api.llm_client import llm_client
 
-            api_key = os.environ.get('QWEN_API_KEY')
-            if not api_key:
-                logger.warning('QWEN_API_KEY not configured, cannot generate FAQ')
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+            content = llm_client.generate(messages, temperature=0.3, max_tokens=2048)
+            if not content or content.startswith("抱歉"):
                 return []
 
-            api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}"
-            }
-
-            data = {
-                "model": "qwen-turbo",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": 0.3,
-                "max_tokens": 2048
-            }
-
-            response = requests.post(
-                api_url,
-                headers=headers,
-                json=data,
-                timeout=60
-            )
-            response.raise_for_status()
-            result = response.json()
-
-            if 'choices' in result and len(result['choices']) > 0:
-                content = result['choices'][0]['message']['content'].strip()
-
-                # Parse JSON response
-                try:
-                    # Try to find JSON array in response
-                    import re
-                    json_match = re.search(r'\[.*\]', content, re.DOTALL)
-                    if json_match:
-                        qa_pairs = json.loads(json_match.group())
-                        logger.info(f'Extracted {len(qa_pairs)} Q&A pairs')
-                        return qa_pairs
-                    else:
-                        logger.warning(f'No JSON array found in response: {content[:200]}...')
-                        return []
-                except json.JSONDecodeError as e:
-                    logger.error(f'Failed to parse JSON response: {e}')
-                    return []
+            content = content.strip()
+            json_match = re.search(r'\[.*\]', content, re.DOTALL)
+            if json_match:
+                qa_pairs = json.loads(json_match.group())
+                logger.info(f'Extracted {len(qa_pairs)} Q&A pairs')
+                return qa_pairs
             else:
-                logger.warning(f'Unexpected API response format: {result}')
+                logger.warning(f'No JSON array found in response: {content[:200]}...')
                 return []
 
-        except requests.exceptions.Timeout:
-            logger.error('FAQ extraction timeout')
+        except json.JSONDecodeError as e:
+            logger.error(f'Failed to parse JSON response: {e}')
             return []
         except Exception as e:
             logger.error(f'FAQ extraction failed: {e}', exc_info=True)

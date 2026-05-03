@@ -123,8 +123,6 @@ class QueryRewriter:
         Returns:
             Rewritten query
         """
-        # Import here to avoid circular imports
-        from api.qwen_api import qwen_api
 
         system_prompt = """你是一个 query 改写助手。你的任务是根据对话历史，改写用户的最新 query，使其更清晰完整。
 
@@ -142,53 +140,18 @@ class QueryRewriter:
 请改写 query（如果不需要改写，返回原 query）："""
 
         try:
-            # Use Qwen API with timeout
-            import requests
-            import os
+            from api.llm_client import llm_client
 
-            api_key = os.environ.get('QWEN_API_KEY')
-            if not api_key:
-                logger.warning('QWEN_API_KEY not configured, using original query')
-                return query
-
-            api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}"
-            }
-
-            data = {
-                "model": "qwen-turbo",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": 0.3,  # Lower temperature for more deterministic output
-                "max_tokens": 256
-            }
-
-            response = requests.post(
-                api_url,
-                headers=headers,
-                json=data,
-                timeout=self.timeout_seconds
-            )
-            response.raise_for_status()
-            result = response.json()
-
-            if 'choices' in result and len(result['choices']) > 0:
-                rewritten = result['choices'][0]['message']['content'].strip()
-                # Remove any quotes or extra formatting
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+            rewritten = llm_client.generate(messages, temperature=0.3, max_tokens=256)
+            if rewritten and not rewritten.startswith("抱歉"):
                 rewritten = rewritten.strip('"\'').strip()
                 return rewritten
-            else:
-                logger.warning(f'Unexpected API response format: {result}')
-                return query
-
-        except requests.exceptions.Timeout:
-            logger.warning(f'Query rewrite timeout ({self.timeout_seconds}s), using original query')
             return query
+
         except Exception as e:
             logger.warning(f'Query rewrite failed: {e}, using original query')
             return query

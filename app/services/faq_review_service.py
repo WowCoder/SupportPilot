@@ -91,44 +91,25 @@ class FAQReviewService:
 
     def _extract_qa_from_conversation(self, conversation_text: str):
         """Extract Q&A from conversation using LLM. Returns (question, answer) tuple."""
-        import os
-        import requests
+        from api.llm_client import llm_client
 
-        api_key = os.environ.get('QWEN_API_KEY')
-        if not api_key:
-            logger.warning('QWEN_API_KEY not configured, using fallback extraction')
-            return self._fallback_extraction(conversation_text)
-
-        api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
-        }
-        data = {
-            "model": "qwen-turbo",
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "你是一个FAQ提取专家。从客服对话中提取一个核心问答对。规则：1.问题应简洁明确；2.答案应准确完整；3.去除客套话；4.输出必须为JSON格式：{\"question\": \"...\", \"answer\": \"...\"}"
-                },
-                {
-                    "role": "user",
-                    "content": f"请从以下对话中提取FAQ：\n\n{conversation_text}"
-                }
-            ],
-            "temperature": 0.3,
-            "max_tokens": 1024
-        }
+        messages = [
+            {
+                "role": "system",
+                "content": "你是一个FAQ提取专家。从客服对话中提取一个核心问答对。规则：1.问题应简洁明确；2.答案应准确完整；3.去除客套话；4.输出必须为JSON格式：{\"question\": \"...\", \"answer\": \"...\"}"
+            },
+            {
+                "role": "user",
+                "content": f"请从以下对话中提取FAQ：\n\n{conversation_text}"
+            }
+        ]
 
         try:
-            response = requests.post(api_url, headers=headers, json=data, timeout=30)
-            response.raise_for_status()
-            result = response.json()
-
-            if 'choices' in result and len(result['choices']) > 0:
+            content = llm_client.generate(messages, temperature=0.3, max_tokens=1024)
+            if content and not content.startswith("抱歉"):
                 import json
                 import re
-                content = result['choices'][0]['message']['content'].strip()
+                content = content.strip()
                 json_match = re.search(r'\{.*\}', content, re.DOTALL)
                 if json_match:
                     parsed = json.loads(json_match.group())

@@ -68,50 +68,17 @@ class SynthesisNode:
 请根据上下文回答用户问题："""
 
         try:
-            import requests
-            import os
+            from api.llm_client import llm_client
 
-            api_key = os.environ.get('QWEN_API_KEY')
-            if not api_key:
-                logger.warning('QWEN_API_KEY not configured')
-                return None
-
-            api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}"
-            }
-
-            data = {
-                "model": "qwen-turbo",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": 0.3,
-                "max_tokens": 1024
-            }
-
-            response = requests.post(
-                api_url,
-                headers=headers,
-                json=data,
-                timeout=self.timeout_seconds
-            )
-            response.raise_for_status()
-            result = response.json()
-
-            if 'choices' in result and len(result['choices']) > 0:
-                answer = result['choices'][0]['message']['content'].strip()
-                return answer
-            else:
-                logger.warning(f'Unexpected API response format: {result}')
-                return None
-
-        except requests.exceptions.Timeout:
-            logger.warning(f'Answer generation timeout ({self.timeout_seconds}s)')
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+            answer = llm_client.generate(messages, temperature=0.3, max_tokens=1024)
+            if answer and not answer.startswith("抱歉"):
+                return answer.strip()
             return None
+
         except Exception as e:
             logger.warning(f'Answer generation failed: {e}')
             return None

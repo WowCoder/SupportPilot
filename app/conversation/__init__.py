@@ -11,7 +11,7 @@ from ..extensions import db
 from ..models import Conversation, Message
 from ..utils import sanitize_input
 from rag.rag_utils import rag_utils
-from api.qwen_api import qwen_api
+from api.llm_client import llm_client
 
 logger = logging.getLogger(__name__)
 conversation_bp = Blueprint('conversation', __name__, url_prefix='/conversation')
@@ -83,7 +83,7 @@ def send_message(conversation_id):
             # Use RAG to retrieve relevant information
             relevant_info = rag_utils.retrieve_relevant_info(content, k=3)
             # Generate response using Qwen API
-            ai_response = qwen_api.generate_response(content, relevant_info)
+            ai_response = llm_client.chat(content, relevant_info)
             ai_message = Message(
                 conversation_id=conversation_id,
                 sender_type='ai',
