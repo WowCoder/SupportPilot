@@ -88,7 +88,7 @@
 | RAG | LangChain + Chroma + LangGraph |
 | Embedding | all-MiniLM-L6-v2 (384 维) |
 | 重排序 | cross-encoder/ms-marco-MiniLM-L-6-v2 |
-| LLM | Alibaba Qwen (qwen-turbo) |
+| LLM | 可配置 (DeepSeek / Qwen / OpenAI 兼容 / Anthropic 兼容) |
 | 前端 | HTML 模板 + CSS 定制 |
 
 ---
@@ -105,7 +105,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# 编辑 .env 设置 QWEN_API_KEY 等
+# 编辑 .env 设置 LLM_API_KEY 等
 ```
 
 ### 3. 启动应用

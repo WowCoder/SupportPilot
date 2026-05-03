@@ -21,7 +21,7 @@ cp .env.example .env
 编辑 `.env` 文件：
 ```bash
 SECRET_KEY=your-secret-key-here
-QWEN_API_KEY=your-qwen-api-key-here
+LLM_API_KEY=your-api-key-here
 DATABASE_URL=sqlite:///app.db
 FLASK_DEBUG=true
 ```
@@ -70,7 +70,7 @@ Gunicorn 日志（生产环境）：
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
 | SECRET_KEY | Flask 密钥 | 随机生成 |
-| QWEN_API_KEY | 阿里云 Qwen API 密钥 | 必须设置 |
+| LLM_API_KEY | LLM API 密钥（兼容 OpenAI/Anthropic 格式） | 必须设置 |
 | DATABASE_URL | 数据库连接 URL | sqlite:///app.db |
 | FLASK_ENV | 运行环境 | development |
 | FLASK_DEBUG | 调试模式 | true |
@@ -79,10 +79,10 @@ Gunicorn 日志（生产环境）：
 
 ## 故障排除
 
-### QWEN_API_KEY 错误
+### LLM_API_KEY 错误
 
 ```bash
-export QWEN_API_KEY=your-actual-key
+export LLM_API_KEY=your-actual-key
 ```
 
 ### 数据库锁定

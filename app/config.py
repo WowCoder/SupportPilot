@@ -25,7 +25,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI: str = 'sqlite:///app.db'
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
 
-    # Qwen API
+    # LLM API
     LLM_API_KEY: Optional[str] = None
 
     # File upload

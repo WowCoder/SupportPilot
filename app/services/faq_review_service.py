@@ -64,7 +64,7 @@ class FAQReviewService:
                 for r in chat_records
             ])
 
-            # Extract Q&A using Qwen API
+            # Extract Q&A using LLM
             question, answer = self._extract_qa_from_conversation(conversation_text)
             if not question or not answer:
                 logger.warning(f'Failed to extract Q&A from session {session_id}')

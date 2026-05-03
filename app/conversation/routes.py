@@ -99,7 +99,7 @@ def send_message(conversation_id):
             # Use RAG to retrieve relevant information with rewritten query
             relevant_info = rag_utils.retrieve_relevant_info(rewritten_query, k=3)
 
-            # Generate response using Qwen API
+            # Generate response using LLM
             ai_response = llm_client.chat(rewritten_query, relevant_info)
             ai_message = Message(
                 conversation_id=conversation_id,

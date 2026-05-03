@@ -82,7 +82,7 @@ def send_message(conversation_id):
         try:
             # Use RAG to retrieve relevant information
             relevant_info = rag_utils.retrieve_relevant_info(content, k=3)
-            # Generate response using Qwen API
+            # Generate response using LLM
             ai_response = llm_client.chat(content, relevant_info)
             ai_message = Message(
                 conversation_id=conversation_id,

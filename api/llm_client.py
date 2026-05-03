@@ -152,7 +152,7 @@ class LLMClient:
     ) -> str:
         """Call an OpenAI-compatible chat completions endpoint."""
         api_base = cfg.get("api_base", "").rstrip("/")
-        model = cfg.get("model", "qwen-turbo")
+        model = cfg.get("model", "deepseek-v4-flash")
         timeout = cfg.get("timeout", 30)
         url = f"{api_base}/chat/completions"
 

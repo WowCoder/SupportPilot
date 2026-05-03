@@ -41,11 +41,11 @@
 │     ↓                                                                    │
 │  Cross-Encoder 重排序 → 返回 Top-3                                      │
 │     ↓                                                                    │
-│  qwen_api.generate_response(query, context)                             │
+│  llm_client.chat(query, context)                                        │
 │     ↓                                                                    │
 │  构建 Prompt: "相关知识：...\n\n用户问题：..."                           │
 │     ↓                                                                    │
-│  调用 Qwen API (qwen-turbo) → 生成回答                                  │
+│  调用 LLM (deepseek-v4-flash) → 生成回答                                 │
 │     ↓                                                                    │
 │  保存 AI 消息到数据库 → 返回前端                                         │
 │                                                                         │
@@ -140,10 +140,11 @@ RRF Score = α / (rank_bm25 + 60) + (1-α) / (rank_vector + 60)
 
 ## 阶段 5: LLM 生成回答
 
-**代码**: `api/qwen_api.py:generate_response()`
+**代码**: `api/llm_client.py`
 
-- API：Alibaba Qwen (`qwen-turbo`)
-- 端点：`https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`
+- API：可配置 (OpenAI 兼容 / Anthropic 兼容)
+- Provider 和模型：`config/llm_config.yaml`
+- 默认：DeepSeek (`deepseek-v4-flash`)
 - Prompt 构建：
   ```
   相关知识：{content} (相似度：0.85)
@@ -166,7 +167,7 @@ RRF Score = α / (rank_bm25 + 60) + (1-α) / (rank_vector + 60)
 | 关键词检索 | BM25Okapi (rank_bm25) | 混合搜索组件 |
 | 文本分块 | SemanticChunker / SentenceChunker / RecursiveCharacterTextSplitter | 智能文本切分 |
 | PDF 解析 | pdfplumber | 布局感知文本提取 |
-| LLM | Qwen-Turbo (阿里云) | 最终回答生成 |
+| LLM | 可配置 (DeepSeek V4 Flash 等) | 最终回答生成 |
 
 ## 性能特征
 

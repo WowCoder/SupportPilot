@@ -55,11 +55,11 @@ SupportPilot 的 RAG 系统由以下核心组件构成：
 │     ↓                                                                    │
 │  Cross-Encoder 重排序 → 返回 Top-3                                      │
 │     ↓                                                                    │
-│  qwen_api.generate_response(query, context)                             │
+│  llm_client.chat(query, context)                                        │
 │     ↓                                                                    │
 │  构建 Prompt: "相关知识：...\n\n用户问题：..."                           │
 │     ↓                                                                    │
-│  调用 Qwen API (qwen-turbo) → 生成回答                                  │
+│  调用 LLM (deepseek-v4-flash) → 生成回答                                 │
 │     ↓                                                                    │
 │  保存 AI 消息到数据库 → 返回前端                                         │
 │                                                                         │
@@ -79,7 +79,7 @@ SupportPilot 的 RAG 系统由以下核心组件构成：
 | 文本分块 | RecursiveCharacterTextSplitter | `process_document()` |
 | PDF 解析 | pdfplumber | `_extract_pdf_text_layout_aware()` |
 | 文档加载 | TextLoader, Docx2txtLoader | `process_document()` |
-| LLM | Qwen-Turbo (阿里云) | `api/qwen_api.py` |
+| LLM | DeepSeek V4 Flash (可配置) | `api/llm_client.py` |
 
 ---
 
@@ -332,23 +332,17 @@ def generate_response(self, query, context):
 
 ### 2. LLM 调用
 
+通过统一客户端 `api/llm_client.py` 调用，支持 OpenAI/Anthropic 兼容接口。
+Provider 和模型由 `config/llm_config.yaml` 配置。
+
 ```python
-POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+from api.llm_client import llm_client
 
-Headers:
-    Authorization: Bearer {QWEN_API_KEY}
-    Content-Type: application/json
+# 高层接口：query + context
+response = llm_client.chat(query, context, system_prompt=..., temperature=0.7)
 
-Body:
-{
-    "model": "qwen-turbo",
-    "messages": [
-        {"role": "system", "content": "你是一个 helpful 的客户支持助手。使用提供的知识来回答用户问题。如果知识库中没有相关信息，请诚实地告诉用户。"},
-        {"role": "user", "content": message}
-    ],
-    "temperature": 0.7,
-    "max_tokens": 1024
-}
+# 底层接口：自定义 messages
+response = llm_client.generate(messages=[...], temperature=0.3, max_tokens=1024)
 ```
 
 ### 3. 错误处理
@@ -361,7 +355,7 @@ Body:
 | 连接错误 | "抱歉，无法连接到 AI 服务，请检查网络连接。" |
 | 其他错误 | "抱歉，AI 服务请求失败，请稍后重试。" |
 
-**代码位置**: `api/qwen_api.py:31-126`
+**代码位置**: `api/llm_client.py`
 
 ---
 
@@ -431,12 +425,13 @@ Body:
 | `delete_documents_by_source(filename)` | 按文件名删除文档 |
 | `clear_bm25_index()` | 清除 BM25 索引 |
 
-### QwenAPI 类方法
+### LLMClient 类方法
 
 | 方法 | 参数 | 返回值 | 说明 |
 |------|------|--------|------|
-| `generate_response()` | query, context | str | 生成 AI 回答 |
-| `_get_api_key()` | - | str | 从配置获取 API 密钥 |
+| `chat()` | query, context, system_prompt, temperature, max_tokens | str | 高层接口，自动构建 prompt |
+| `generate()` | messages, temperature, max_tokens | str | 底层接口，自定义 messages |
+| `_get_api_key()` | - | str | 多来源获取 API 密钥 |
 
 ---
 
