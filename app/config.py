@@ -69,7 +69,7 @@ class ProductionConfig(Config):
             raise ValueError("SECRET_KEY environment variable must be set in production")
 
         self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
-        self.LLM_API_KEY = os.environ.get('LLM_API_KEY') or os.environ.get('QWEN_API_KEY')
+        self.LLM_API_KEY = os.environ.get('LLM_API_KEY')
         if not self.LLM_API_KEY:
             raise ValueError("LLM_API_KEY environment variable must be set in production")
 
@@ -86,7 +86,7 @@ class DevelopmentConfig(Config):
     def __init__(self):
         self.SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
         self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///app.db'
-        self.LLM_API_KEY = os.environ.get('LLM_API_KEY') or os.environ.get('QWEN_API_KEY')
+        self.LLM_API_KEY = os.environ.get('LLM_API_KEY')
         if not self.LLM_API_KEY:
             raise ValueError("LLM_API_KEY environment variable must be set")
 

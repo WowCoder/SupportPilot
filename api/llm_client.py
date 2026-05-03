@@ -33,7 +33,7 @@ class LLMClient:
         self._provider = self._config.get("provider", "openai_compatible")
 
     def _get_api_key(self) -> Optional[str]:
-        """Get API key with priority: yaml config -> flask config -> env var (LLM_API_KEY -> QWEN_API_KEY)."""
+        """Get API key with priority: yaml config -> flask config -> env var."""
         # 1. Config file api_key_env (env var name or literal key)
         provider_cfg = self._get_provider_config()
         key_env = provider_cfg.get("api_key_env", "")
@@ -47,20 +47,14 @@ class LLMClient:
         # 2. Flask app config
         try:
             from flask import current_app
-            for key in ("LLM_API_KEY", "QWEN_API_KEY"):
-                val = current_app.config.get(key)
-                if val:
-                    return val
+            val = current_app.config.get("LLM_API_KEY")
+            if val:
+                return val
         except RuntimeError:
             pass
 
-        # 3. Environment variables (fallback)
-        for key in ("LLM_API_KEY", "QWEN_API_KEY"):
-            val = os.environ.get(key)
-            if val:
-                return val
-
-        return None
+        # 3. Environment variable
+        return os.environ.get("LLM_API_KEY")
 
     def _get_provider_config(self) -> Dict:
         return self._config.get(self._provider, {})
