@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — SupportPilot</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topnav">
+  <div class="topnav-left">
+    <a class="topnav-brand" href="index.html"><span class="logo-dot"></span>SupportPilot</a>
+    <div class="topnav-links">
+      <a href="user-dashboard.html" class="active">Dashboard</a>
+      <a href="chat.html">Messages</a>
+      <a href="upload.html">Documents</a>
+      <a href="faq-manage.html">FAQ</a>
+    </div>
+  </div>
+  <div class="topnav-right">
+    <span class="text-sm text-muted">Acme Inc.</span>
+    <div class="topnav-avatar">JS</div>
+  </div>
+</div>
+
+<div class="page-content">
+
+  <div class="section-header">
+    <div>
+      <h1>Welcome back, Jane</h1>
+      <p class="text-muted" style="margin-top:2px">Here's what's happening with your support tickets.</p>
+    </div>
+    <a class="btn btn-primary" href="chat.html">New Ticket</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon blue">&#9998;</div>
+      <div class="stat-value">12</div>
+      <div class="stat-label">Active Tickets</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">&#10003;</div>
+      <div class="stat-value">47</div>
+      <div class="stat-label">Resolved This Month</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber">&#9202;</div>
+      <div class="stat-value">2.4h</div>
+      <div class="stat-label">Avg. Response Time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">&#9733;</div>
+      <div class="stat-value">94%</div>
+      <div class="stat-label">Satisfaction Score</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <!-- Recent Tickets -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Recent Tickets</span>
+        <a href="chat.html" class="btn btn-ghost btn-sm">View All</a>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>ID</th><th>Subject</th><th>Status</th><th>Updated</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-mono">#1042</td>
+              <td>Cannot access admin panel after SSO update</td>
+              <td><span class="badge badge-amber">Open</span></td>
+              <td class="text-sm text-muted">2h ago</td>
+            </tr>
+            <tr>
+              <td class="text-mono">#1041</td>
+              <td>Billing invoice discrepancy — March 2026</td>
+              <td><span class="badge badge-blue">In Progress</span></td>
+              <td class="text-sm text-muted">5h ago</td>
+            </tr>
+            <tr>
+              <td class="text-mono">#1040</td>
+              <td>Integration API key rotation procedure</td>
+              <td><span class="badge badge-green">Resolved</span></td>
+              <td class="text-sm text-muted">1d ago</td>
+            </tr>
+            <tr>
+              <td class="text-mono">#1039</td>
+              <td>Team member permission not applying</td>
+              <td><span class="badge badge-green">Resolved</span></td>
+              <td class="text-sm text-muted">2d ago</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Recent Activity</span>
+      </div>
+      <div class="activity-feed">
+        <div class="activity-item">
+          <div class="act-icon">&#9993;</div>
+          <div class="act-body"><strong>Sarah (Support)</strong> replied to <strong>#1042</strong> &mdash; "I've escalated this to our infrastructure team..."</div>
+          <div class="act-time">2h ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="act-icon">&#10003;</div>
+          <div class="act-body"><strong>#1040</strong> was marked resolved</div>
+          <div class="act-time">1d ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="act-icon">&#9733;</div>
+          <div class="act-body">You rated <strong>#1039</strong> response as helpful</div>
+          <div class="act-time">2d ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="act-icon">&#9998;</div>
+          <div class="act-body">You created ticket <strong>#1041</strong> — Billing inquiry</div>
+          <div class="act-time">3d ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="act-icon">&#128206;</div>
+          <div class="act-body"><strong>3 documents</strong> uploaded to ticket #1038</div>
+          <div class="act-time">4d ago</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

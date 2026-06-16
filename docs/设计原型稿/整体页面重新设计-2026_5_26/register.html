@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Register — SupportPilot</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <span class="logo-dot"></span>
+      <h1>SupportPilot</h1>
+      <p>Create your account</p>
+    </div>
+
+    <form onsubmit="event.preventDefault(); window.location.href='user-dashboard.html'">
+      <div class="form-group">
+        <label class="form-label" for="name">Full Name</label>
+        <input id="name" class="form-input" type="text" placeholder="Jane Smith" value="Jane Smith" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="company">Company</label>
+        <input id="company" class="form-input" type="text" placeholder="Acme Inc." value="Acme Inc." required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Work Email</label>
+        <input id="email" class="form-input" type="email" placeholder="name@company.com" value="jane@acme.co" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input id="password" class="form-input" type="password" placeholder="Min. 8 characters" value="password123" required minlength="8">
+        <div class="form-hint">Must be at least 8 characters</div>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%;margin-top:8px" type="submit">Create Account</button>
+    </form>
+
+    <div class="auth-footer">
+      Already have an account? <a href="login.html">Sign in</a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

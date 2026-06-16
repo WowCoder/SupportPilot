@@ -140,7 +140,7 @@ class QueryRewriter:
 请改写 query（如果不需要改写，返回原 query）："""
 
         try:
-            from api.llm_client import llm_client
+            from llm.llm_client import llm_client
 
             messages = [
                 {"role": "system", "content": system_prompt},

@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ Management — SupportPilot</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topnav">
+  <div class="topnav-left">
+    <a class="topnav-brand" href="index.html"><span class="logo-dot"></span>SupportPilot</a>
+    <div class="topnav-links">
+      <a href="user-dashboard.html">Dashboard</a>
+      <a href="chat.html">Messages</a>
+      <a href="upload.html">Documents</a>
+      <a href="faq-manage.html" class="active">FAQ</a>
+    </div>
+  </div>
+  <div class="topnav-right">
+    <span class="text-sm text-muted">Acme Inc.</span>
+    <div class="topnav-avatar">JS</div>
+  </div>
+</div>
+
+<div class="page-content">
+
+  <div class="section-header">
+    <div>
+      <h1>FAQ Management</h1>
+      <p class="text-muted" style="margin-top:2px">28 articles &middot; 6 categories &middot; Last updated May 25</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" id="exportBtn">Export</button>
+      <button class="btn btn-primary" onclick="openAddModal()">+ Add Article</button>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <input class="form-input" type="text" placeholder="Search articles..." id="faqSearch" oninput="filterFAQs()">
+    <div class="filter-tabs" id="categoryTabs">
+      <button class="filter-tab active" data-cat="all">All</button>
+      <button class="filter-tab" data-cat="getting-started">Getting Started</button>
+      <button class="filter-tab" data-cat="billing">Billing</button>
+      <button class="filter-tab" data-cat="security">Security</button>
+      <button class="filter-tab" data-cat="integrations">Integrations</button>
+      <button class="filter-tab" data-cat="troubleshooting">Troubleshooting</button>
+    </div>
+  </div>
+
+  <!-- Bulk Actions -->
+  <div class="bulk-bar" id="bulkBar" style="display:none">
+    <span id="bulkCount">0 selected</span>
+    <button class="btn btn-ghost btn-sm" onclick="bulkDelete()">Delete Selected</button>
+    <button class="btn btn-ghost btn-sm" onclick="bulkCategory()">Change Category</button>
+    <button class="btn btn-ghost btn-sm" onclick="clearSelection()">Clear Selection</button>
+  </div>
+
+  <!-- FAQ List -->
+  <div class="faq-list" id="faqList">
+
+    <div class="faq-item" data-category="getting-started">
+      <div class="faq-q" onclick="toggleFAQ(this)">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="event.stopPropagation()">
+          <input type="checkbox" class="checkbox-cell" onchange="updateBulkBar()" data-faq-id="1">
+        </label>
+        <span style="flex:1">How do I create my first support ticket?</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <span class="badge badge-blue">Getting Started</span>
+          <span class="chevron">&#9660;</span>
+        </span>
+      </div>
+      <div class="faq-a">
+        <p>To create your first ticket, click the <strong>New Ticket</strong> button on your dashboard or navigate to Messages and click the compose button. Fill in the subject, describe your issue in detail, select a priority level, and attach any relevant screenshots or log files. The support team typically responds within 2 hours for business-hours tickets.</p>
+      </div>
+    </div>
+
+    <div class="faq-item" data-category="getting-started">
+      <div class="faq-q" onclick="toggleFAQ(this)">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="event.stopPropagation()">
+          <input type="checkbox" class="checkbox-cell" onchange="updateBulkBar()" data-faq-id="2">
+        </label>
+        <span style="flex:1">What is the typical response time for support tickets?</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <span class="badge badge-blue">Getting Started</span>
+          <span class="chevron">&#9660;</span>
+        </span>
+      </div>
+      <div class="faq-a">
+        <p>Standard response times depend on your plan: <strong>Enterprise</strong> — 30 minutes (24/7), <strong>Business</strong> — 2 hours (business hours), <strong>Starter</strong> — 8 hours (business hours). Critical and High priority tickets are always prioritized, regardless of plan level.</p>
+      </div>
+    </div>
+
+    <div class="faq-item" data-category="billing">
+      <div class="faq-q" onclick="toggleFAQ(this)">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="event.stopPropagation()">
+          <input type="checkbox" class="checkbox-cell" onchange="updateBulkBar()" data-faq-id="3">
+        </label>
+        <span style="flex:1">How do I update my billing information?</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <span class="badge badge-amber">Billing</span>
+          <span class="chevron">&#9660;</span>
+        </span>
+      </div>
+      <div class="faq-a">
+        <p>Navigate to <strong>Settings > Billing</strong> from the sidebar. You can update your credit card, switch between monthly and annual billing, view past invoices, and update your billing address. Changes take effect immediately. For enterprise invoicing, contact your account manager.</p>
+      </div>
+    </div>
+
+    <div class="faq-item" data-category="security">
+      <div class="faq-q" onclick="toggleFAQ(this)">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="event.stopPropagation()">
+          <input type="checkbox" class="checkbox-cell" onchange="updateBulkBar()" data-faq-id="4">
+        </label>
+        <span style="flex:1">How do I set up SSO for my organization?</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <span class="badge badge-red">Security</span>
+          <span class="chevron">&#9660;</span>
+        </span>
+      </div>
+      <div class="faq-a">
+        <p>SSO setup is available on Business and Enterprise plans. Go to <strong>Settings > Security > Single Sign-On</strong>. We support SAML 2.0 (Okta, Azure AD, OneLogin) and OpenID Connect. You'll need admin access to your identity provider to complete the configuration. Our support team can assist with the setup — just open a ticket with the subject "SSO Setup".</p>
+      </div>
+    </div>
+
+    <div class="faq-item" data-category="integrations">
+      <div class="faq-q" onclick="toggleFAQ(this)">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="event.stopPropagation()">
+          <input type="checkbox" class="checkbox-cell" onchange="updateBulkBar()" data-faq-id="5">
+        </label>
+        <span style="flex:1">Which third-party integrations are supported?</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <span class="badge badge-green">Integrations</span>
+          <span class="chevron">&#9660;</span>
+        </span>
+      </div>
+      <div class="faq-a">
+        <p>SupportPilot integrates with Slack (ticket creation + notifications), Jira (bi-directional sync), GitHub (issue linking), Zendesk (migration importer), Salesforce (case sync), and Microsoft Teams. All integrations are configured from <strong>Settings > Integrations</strong>. API access is also available on Enterprise plans for custom integrations.</p>
+      </div>
+    </div>
+
+    <div class="faq-item" data-category="troubleshooting">
+      <div class="faq-q" onclick="toggleFAQ(this)">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="event.stopPropagation()">
+          <input type="checkbox" class="checkbox-cell" onchange="updateBulkBar()" data-faq-id="6">
+        </label>
+        <span style="flex:1">Why am I not receiving email notifications?</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <span class="badge badge-red">Troubleshooting</span>
+          <span class="chevron">&#9660;</span>
+        </span>
+      </div>
+      <div class="faq-a">
+        <p>First, check your <strong>Settings > Notifications</strong> to ensure email alerts are enabled for the events you want. Then check your spam/junk folder — add <code>notifications@supportpilot.com</code> to your contacts. If you're still not receiving emails, your company's mail server may be blocking our domain. Contact your IT team or open a ticket and we'll help troubleshoot.</p>
+      </div>
+    </div>
+
+    <div class="faq-item" data-category="troubleshooting">
+      <div class="faq-q" onclick="toggleFAQ(this)">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="event.stopPropagation()">
+          <input type="checkbox" class="checkbox-cell" onchange="updateBulkBar()" data-faq-id="7">
+        </label>
+        <span style="flex:1">The dashboard is loading slowly — what can I do?</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <span class="badge badge-red">Troubleshooting</span>
+          <span class="chevron">&#9660;</span>
+        </span>
+      </div>
+      <div class="faq-a">
+        <p>Dashboard performance can slow down with very large datasets (10,000+ tickets). Try: (1) applying date range filters to narrow the view, (2) clearing your browser cache, (3) checking your network connection to our servers at <code>status.supportpilot.com</code>. If the issue persists, open a ticket with your browser + OS version and we'll investigate.</p>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Add Article Modal -->
+<div class="modal-overlay" id="addModal" style="display:none">
+  <div class="modal">
+    <h3>Add FAQ Article</h3>
+    <div class="form-group">
+      <label class="form-label">Question</label>
+      <input class="form-input" type="text" placeholder="e.g. How do I reset my password?">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Answer</label>
+      <textarea class="form-input" rows="4" placeholder="Write the answer..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select class="form-input">
+        <option>Getting Started</option>
+        <option>Billing</option>
+        <option>Security</option>
+        <option>Integrations</option>
+        <option>Troubleshooting</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="closeAddModal()">Add Article</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  function toggleFAQ(el) {
+    el.parentElement.classList.toggle('open');
+  }
+
+  function filterFAQs() {
+    const query = document.getElementById('faqSearch').value.toLowerCase();
+    const activeCat = document.querySelector('#categoryTabs .filter-tab.active').dataset.cat;
+    document.querySelectorAll('.faq-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      const cat = item.dataset.category;
+      const matchSearch = !query || text.includes(query);
+      const matchCat = activeCat === 'all' || cat === activeCat;
+      item.style.display = matchSearch && matchCat ? '' : 'none';
+    });
+  }
+
+  document.getElementById('categoryTabs').addEventListener('click', (e) => {
+    if (e.target.classList.contains('filter-tab')) {
+      document.querySelectorAll('#categoryTabs .filter-tab').forEach(t => t.classList.remove('active'));
+      e.target.classList.add('active');
+      filterFAQs();
+    }
+  });
+
+  function updateBulkBar() {
+    const checked = document.querySelectorAll('.checkbox-cell:checked');
+    const bar = document.getElementById('bulkBar');
+    document.getElementById('bulkCount').textContent = checked.length + ' selected';
+    bar.style.display = checked.length > 0 ? 'flex' : 'none';
+  }
+
+  function clearSelection() {
+    document.querySelectorAll('.checkbox-cell').forEach(cb => cb.checked = false);
+    updateBulkBar();
+  }
+
+  function bulkDelete() {
+    const checked = document.querySelectorAll('.checkbox-cell:checked');
+    checked.forEach(cb => cb.closest('.faq-item').remove());
+    updateBulkBar();
+    showToast(checked.length + ' article(s) deleted');
+  }
+
+  function bulkCategory() {
+    const cat = prompt('Move to category: getting-started, billing, security, integrations, troubleshooting');
+    if (cat) {
+      document.querySelectorAll('.checkbox-cell:checked').forEach(cb => {
+        cb.closest('.faq-item').dataset.category = cat;
+      });
+      clearSelection();
+      filterFAQs();
+    }
+  }
+
+  function openAddModal() { document.getElementById('addModal').style.display = 'flex'; }
+  function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._t);
+    t._t = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+</script>
+
+</body>
+</html>

@@ -3,15 +3,15 @@ Conversation Blueprint for SupportPilot
 
 Handles conversation creation, viewing, and messaging.
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session
 from flask_login import current_user, login_required
 import logging
 
 from ..extensions import db
 from ..models import Conversation, Message
 from ..utils import sanitize_input
-from rag.rag_utils import rag_utils
-from api.llm_client import llm_client
+from rag.online.service import rag_service
+from llm.llm_client import llm_client
 
 logger = logging.getLogger(__name__)
 conversation_bp = Blueprint('conversation', __name__, url_prefix='/conversation')
@@ -40,7 +40,18 @@ def view(conversation_id):
         return redirect(url_for('main.index'))
 
     messages = conversation.messages.order_by(Message.timestamp).all()
-    return render_template('conversation.html', conversation=conversation, messages=messages)
+    # Sidebar: all conversations for this user/tech
+    if current_user.role == 'tech_support':
+        conversations_for_sidebar = Conversation.query.order_by(
+            Conversation.last_message_at.desc()
+        ).limit(20).all()
+    else:
+        conversations_for_sidebar = current_user.conversations.order_by(
+            Conversation.last_message_at.desc()
+        ).limit(20).all()
+    return render_template('conversation.html', conversation=conversation,
+                           messages=messages,
+                           conversations_for_sidebar=conversations_for_sidebar)
 
 
 @conversation_bp.route('/<int:conversation_id>/send', methods=['POST'])
@@ -80,8 +91,32 @@ def send_message(conversation_id):
     # AI response if user is sending and conversation is active
     if current_user.role == 'user' and conversation.status == 'active':
         try:
-            # Use RAG to retrieve relevant information
-            relevant_info = rag_utils.retrieve_relevant_info(content, k=3)
+            # Use RAG service (Small-to-Big + agentic routing)
+            relevant_info = rag_service.retrieve(
+                query=content, k=3, use_small_to_big=True,
+                session_id=str(conversation_id)
+            )
+
+            # Store retrieval debug info for tech support visibility
+            session['last_retrieval'] = {
+                'query': content,
+                'count': len(relevant_info),
+                'results': [
+                    {
+                        'source': r.get('source', 'unknown'),
+                        'similarity': round(r.get('similarity', 0), 3),
+                        'content_preview': r.get('content', '')[:200]
+                    }
+                    for r in relevant_info
+                ]
+            }
+            logger.info(
+                f'RAG retrieval: query="{content[:50]}...", '
+                f'results={len(relevant_info)}, '
+                f'top_score={relevant_info[0]["similarity"]:.3f}'
+                if relevant_info else f'RAG retrieval: query="{content[:50]}...", results=0'
+            )
+
             # Generate response using LLM
             ai_response = llm_client.chat(content, relevant_info)
             ai_message = Message(

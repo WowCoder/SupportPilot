@@ -9,7 +9,7 @@ from typing import Optional, List, Dict, Any
 from ..extensions import db
 from ..models.faq_entry import FAQEntry, FAQVersion
 from ..models.user import User
-from rag.faq_vector_sync import sync_faq_to_chroma, remove_faq_from_chroma, update_faq_in_chroma
+from rag.utils.faq_vector_sync import sync_faq_to_chroma, remove_faq_from_chroma, update_faq_in_chroma
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +109,7 @@ class FAQManagementService:
                 created_by=user_id
             )
             db.session.add(faq)
+            db.session.flush()  # Get faq.id before creating version
 
             # Add initial version
             version = faq.add_version(user_id, 'Initial creation')

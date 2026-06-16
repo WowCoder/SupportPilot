@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversation — SupportPilot</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topnav">
+  <div class="topnav-left">
+    <a class="topnav-brand" href="index.html"><span class="logo-dot"></span>SupportPilot</a>
+    <div class="topnav-links">
+      <a href="user-dashboard.html">Dashboard</a>
+      <a href="chat.html" class="active">Messages</a>
+      <a href="upload.html">Documents</a>
+      <a href="faq-manage.html">FAQ</a>
+    </div>
+  </div>
+  <div class="topnav-right">
+    <span class="badge badge-green"><span class="status-dot online"></span>Online</span>
+    <div class="topnav-avatar">SK</div>
+  </div>
+</div>
+
+<div class="chat-layout">
+
+  <!-- Chat Sidebar -->
+  <div class="chat-sidebar">
+    <div class="chat-sidebar-header">
+      <h3>Conversations</h3>
+      <input class="form-input" type="text" placeholder="Search..." style="width:140px;font-size:13px;padding:6px 10px">
+    </div>
+    <div class="chat-sidebar-list">
+
+      <div class="chat-list-item active">
+        <div class="avatar">AI</div>
+        <div class="item-body">
+          <div class="item-top"><span class="item-name">Acme Inc.</span><span class="item-time">12m</span></div>
+          <div class="item-preview">Production deployment failing after v2.4...</div>
+        </div>
+      </div>
+
+      <div class="chat-list-item">
+        <div class="avatar">GC</div>
+        <div class="item-body">
+          <div class="item-top"><span class="item-name">Globex Corp</span><span class="item-time">38m</span></div>
+          <div class="item-preview">API rate limiting questions for enterprise...</div>
+        </div>
+      </div>
+
+      <div class="chat-list-item">
+        <div class="avatar">IT</div>
+        <div class="item-body">
+          <div class="item-top"><span class="item-name">Initech</span><span class="item-time">1.2h</span></div>
+          <div class="item-preview">Data export timeout for large datasets —...</div>
+        </div>
+      </div>
+
+      <div class="chat-list-item">
+        <div class="avatar">HL</div>
+        <div class="item-body">
+          <div class="item-top"><span class="item-name">Hooli</span><span class="item-time">2.1h</span></div>
+          <div class="item-preview">User provisioning via SCIM not syncing. We...</div>
+        </div>
+      </div>
+
+      <div class="chat-list-item">
+        <div class="avatar">SI</div>
+        <div class="item-body">
+          <div class="item-top"><span class="item-name">Stark Industries</span><span class="item-time">4.5h</span></div>
+          <div class="item-preview">Feature request: custom email templates for...</div>
+        </div>
+      </div>
+
+      <div class="chat-list-item">
+        <div class="avatar">UC</div>
+        <div class="item-body">
+          <div class="item-top"><span class="item-name">Umbrella Co</span><span class="item-time">5.8h</span></div>
+          <div class="item-preview">SSO certificate expiring — renewal procedure...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Chat Main Area -->
+  <div class="chat-main">
+
+    <div class="chat-main-header">
+      <div class="customer-info">
+        <div class="avatar" style="width:32px;height:32px;font-size:13px">AI</div>
+        <div>
+          <div style="font-weight:600;font-size:14px">Acme Inc. <span class="text-muted" style="font-weight:400">— Jane Smith</span></div>
+          <div class="text-sm text-muted">Plan: Enterprise &middot; Since 2024</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm">&#128196; Docs</button>
+        <button class="btn btn-ghost btn-sm">&#9881; Settings</button>
+      </div>
+    </div>
+
+    <!-- Ticket Info Bar -->
+    <div class="ticket-bar">
+      <div class="tb-item"><span class="tb-label">Ticket</span> <span class="text-mono">#1048</span></div>
+      <div class="tb-item"><span class="tb-label">Priority</span> <span class="badge badge-red">Critical</span></div>
+      <div class="tb-item"><span class="tb-label">Status</span> <span class="badge badge-blue">In Progress</span></div>
+      <div class="tb-item"><span class="tb-label">Opened</span> May 26, 2026</div>
+      <div class="tb-item"><span class="tb-label">Assignee</span> Sarah K.</div>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-messages">
+
+      <div class="chat-msg system">
+        <div class="msg-bubble">Ticket #1048 opened — May 26, 2026 at 2:14 PM</div>
+      </div>
+
+      <div class="chat-msg incoming">
+        <div class="msg-avatar">JS</div>
+        <div>
+          <div class="msg-bubble">Hi — our production deployment is failing after we applied the v2.4 update this morning. We're seeing 502 errors across all services. This is blocking our release.</div>
+          <div class="msg-time">2:14 PM</div>
+        </div>
+      </div>
+
+      <div class="chat-msg outgoing">
+        <div class="msg-avatar">SK</div>
+        <div>
+          <div class="msg-bubble">Hi Jane — I understand the urgency. Let me check the deployment logs right away. Can you confirm which environment this is in (US East, EU West, etc.)?</div>
+          <div class="msg-time">2:16 PM</div>
+        </div>
+      </div>
+
+      <div class="chat-msg incoming">
+        <div class="msg-avatar">JS</div>
+        <div>
+          <div class="msg-bubble">US East — `prod-use1` cluster. We rolled back to v2.3 for now but need this resolved before our 6pm launch window.</div>
+          <div class="msg-time">2:18 PM</div>
+        </div>
+      </div>
+
+      <div class="chat-msg outgoing">
+        <div class="msg-avatar">SK</div>
+        <div>
+          <div class="msg-bubble">Got it — I can see a failed migration script in the deploy logs. It looks like the DB schema update for v2.4 requires a pre-flight index rebuild that wasn't included in the release notes. I'm pulling together a fix now.</div>
+          <div class="msg-time">2:22 PM</div>
+        </div>
+      </div>
+
+      <div class="chat-msg system">
+        <div class="msg-bubble">Sarah uploaded <strong>hotfix-v2.4.1.sql</strong></div>
+      </div>
+
+      <div class="chat-msg outgoing">
+        <div class="msg-avatar">SK</div>
+        <div>
+          <div class="msg-bubble">Here's the hotfix — run this SQL script before re-applying v2.4. It pre-builds the missing index. I've tested it against a staging copy of your schema and it completes in under 30 seconds. Want me to walk you through it?</div>
+          <div class="msg-time">2:31 PM</div>
+        </div>
+      </div>
+
+      <div class="chat-msg incoming">
+        <div class="msg-avatar">JS</div>
+        <div>
+          <div class="msg-bubble">That did it! Applied the hotfix, re-deployed v2.4, all services green. Thank you so much for the fast turnaround — you saved our launch.</div>
+          <div class="msg-time">2:48 PM</div>
+        </div>
+      </div>
+
+      <div class="chat-msg outgoing">
+        <div class="msg-avatar">SK</div>
+        <div>
+          <div class="msg-bubble">Glad to hear it, Jane! We've flagged this in our release process so the migration step gets added to the official v2.4 docs. If anything else comes up during the launch, I'm here.</div>
+          <div class="msg-time">2:50 PM</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Composer -->
+    <div class="chat-composer">
+      <button class="btn btn-ghost btn-icon" title="Attach file">&#128206;</button>
+      <textarea rows="1" placeholder="Type a reply..."></textarea>
+      <button class="btn btn-primary btn-sm">Send</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Auto-resize textarea
+  const ta = document.querySelector('.chat-composer textarea');
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  });
+</script>
+
+</body>
+</html>

@@ -157,7 +157,7 @@ class FAQGenerator:
         try:
             import json
             import re
-            from api.llm_client import llm_client
+            from llm.llm_client import llm_client
 
             messages = [
                 {"role": "system", "content": system_prompt},
@@ -205,7 +205,7 @@ class FAQGenerator:
             return False, None
 
         # Use RAG to find similar FAQs
-        from rag.rag_utils import rag_utils
+        from rag.offline.pipeline import rag_utils
 
         try:
             # Search for similar FAQs in ChromaDB
@@ -246,7 +246,7 @@ class FAQGenerator:
         Returns:
             Created FAQEntry or None
         """
-        from rag.rag_utils import rag_utils
+        from rag.offline.pipeline import rag_utils
 
         # Create FAQ entry
         faq = FAQEntry(
@@ -297,7 +297,7 @@ class FAQGenerator:
         Returns:
             True if successful
         """
-        from rag.rag_utils import rag_utils
+        from rag.offline.pipeline import rag_utils
 
         faq = FAQEntry.query.get(faq_id)
         if not faq:

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upload Documents — SupportPilot</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topnav">
+  <div class="topnav-left">
+    <a class="topnav-brand" href="index.html"><span class="logo-dot"></span>SupportPilot</a>
+    <div class="topnav-links">
+      <a href="user-dashboard.html">Dashboard</a>
+      <a href="chat.html">Messages</a>
+      <a href="upload.html" class="active">Documents</a>
+      <a href="faq-manage.html">FAQ</a>
+    </div>
+  </div>
+  <div class="topnav-right">
+    <span class="text-sm text-muted">Acme Inc.</span>
+    <div class="topnav-avatar">JS</div>
+  </div>
+</div>
+
+<div class="upload-shell">
+
+  <div class="section-header">
+    <div>
+      <h1>Upload Documents</h1>
+      <p class="text-muted" style="margin-top:2px">Attach files to ticket #1048 — Production deployment issue</p>
+    </div>
+  </div>
+
+  <!-- Drop Zone -->
+  <div class="upload-zone" id="dropZone">
+    <div class="upload-icon">&#128193;</div>
+    <h3>Drop files here or <span class="browse-link" id="browseLink">browse</span></h3>
+    <p>Supports PDF, DOCX, XLSX, PNG, JPG, TXT, ZIP — up to 50MB each</p>
+    <input type="file" id="fileInput" multiple hidden accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.txt,.zip,.csv,.json,.log,.sql">
+  </div>
+
+  <!-- File List -->
+  <div class="file-list" id="fileList"></div>
+
+  <!-- Upload Settings -->
+  <div class="settings-panel">
+    <h3>Upload Settings</h3>
+    <div class="settings-row">
+      <div>
+        <div class="setting-label">Auto-analyze documents</div>
+        <div class="setting-hint">Extract text and suggest relevant FAQ articles</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" checked>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </label>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="setting-label">Notify assignee</div>
+        <div class="setting-hint">Send email notification when files are uploaded</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" checked>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </label>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="setting-label">Compress large images</div>
+        <div class="setting-hint">Reduce file size for PNG/JPG over 5MB</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div style="margin-top:20px;display:flex;justify-content:flex-end;gap:8px">
+    <a class="btn btn-secondary" href="chat.html">Cancel</a>
+    <button class="btn btn-primary" id="uploadBtn" disabled>Upload Files</button>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const browseLink = document.getElementById('browseLink');
+  const fileList = document.getElementById('fileList');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const toast = document.getElementById('toast');
+
+  let files = [];
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  function iconForType(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    const map = { pdf: '&#128196;', docx: '&#128196;', doc: '&#128196;', xlsx: '&#128202;', csv: '&#128202;', png: '&#128247;', jpg: '&#128247;', jpeg: '&#128247;', zip: '&#128193;', txt: '&#128221;', log: '&#128221;', json: '&#128221;', sql: '&#128221;' };
+    return map[ext] || '&#128206;';
+  }
+
+  function renderFileList() {
+    if (files.length === 0) {
+      fileList.innerHTML = '';
+      uploadBtn.disabled = true;
+      return;
+    }
+    uploadBtn.disabled = false;
+    fileList.innerHTML = files.map((f, i) => `
+      <div class="file-item">
+        <div class="file-icon">${iconForType(f.name)}</div>
+        <div class="file-info">
+          <div class="file-name">${f.name}</div>
+          <div class="file-meta">${formatSize(f.size)}</div>
+        </div>
+        <div class="file-status">
+          <button class="btn btn-ghost btn-xs text-danger" onclick="removeFile(${i})" title="Remove">&#10005;</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function addFiles(newFiles) {
+    for (const f of newFiles) {
+      if (!files.some(ex => ex.name === f.name && ex.size === f.size)) {
+        files.push(f);
+      }
+    }
+    renderFileList();
+  }
+
+  function removeFile(i) {
+    files.splice(i, 1);
+    renderFileList();
+  }
+
+  // Browse
+  browseLink.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('click', (e) => { if (e.target !== browseLink) fileInput.click(); });
+  fileInput.addEventListener('change', () => addFiles(fileInput.files));
+
+  // Drag and drop
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    addFiles(e.dataTransfer.files);
+  });
+
+  // Pre-populate with a demo file
+  addFiles([new File(['...'], 'error-log-prod-use1.txt', { type: 'text/plain' })]);
+
+  // Upload button
+  uploadBtn.addEventListener('click', () => {
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+    setTimeout(() => {
+      showToast(files.length + ' file' + (files.length > 1 ? 's' : '') + ' uploaded successfully');
+      files = [];
+      renderFileList();
+      uploadBtn.textContent = 'Upload Files';
+    }, 1200);
+  });
+</script>
+
+</body>
+</html>

@@ -107,7 +107,7 @@ def login():
 @auth_bp.route('/logout')
 def logout():
     """Log out current user"""
-    username = current_user.username
+    username = current_user.username if current_user.is_authenticated else 'anonymous'
     logout_user()
     logger.info(f'User logged out: {username}')
     return redirect(url_for('auth.login'))

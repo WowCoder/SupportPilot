@@ -48,3 +48,14 @@ def faq_manage():
         flash('您没有权限访问此页面')
         return redirect(url_for('main.index'))
     return render_template('faq_manage.html')
+
+
+@main_bp.route('/rag-dashboard')
+@login_required
+def rag_dashboard():
+    """RAG quality dashboard (tech support only)"""
+    if current_user.role != 'tech_support':
+        from flask import flash, redirect, url_for
+        flash('您没有权限访问此页面')
+        return redirect(url_for('main.index'))
+    return render_template('rag_dashboard.html')

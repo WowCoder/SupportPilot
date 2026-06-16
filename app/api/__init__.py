@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 import logging
 
-from rag.rag_utils import rag_utils
+from rag.offline.pipeline import rag_utils
 
 logger = logging.getLogger(__name__)
 api_bp = Blueprint('api', __name__, url_prefix='/api')

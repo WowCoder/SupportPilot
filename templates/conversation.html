@@ -1,1159 +1,228 @@
 {% extends "base.html" %}
+{% block title %}Conversation — SupportPilot{% endblock %}
 
-{% block title %}会话 #{{ conversation.id }} - SupportPilot{% endblock %}
+{% block body %}
+<div class="topnav">
+  <div class="topnav-left">
+    <a class="topnav-brand" href="{{ url_for('main.index') }}"><span class="logo-dot"></span>SupportPilot</a>
+    <div class="topnav-links">
+      <a href="{{ url_for('main.index') }}">Dashboard</a>
+      <a href="#" class="active">Messages</a>
+      {% if current_user.role == 'tech_support' %}<a href="{{ url_for('document.upload') }}">Documents</a><a href="{{ url_for('main.faq_manage') }}">FAQ</a>{% endif %}
+    </div>
+  </div>
+  <div class="topnav-right">
+    {% if current_user.role == 'tech_support' %}
+    <span class="badge badge-green" style="margin-inline-end:8px"><span class="status-dot online"></span>Online</span>
+    {% endif %}
+    <a href="{{ url_for('auth.logout') }}" class="topnav-avatar" title="Logout" style="text-decoration:none">{{ current_user.username[0]|upper }}</a>
+  </div>
+</div>
 
-{% block content %}
-<div class="container container-md">
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1 class="page-title">
-            <i class="fas fa-comments"></i> 会话 #{{ conversation.id }}
-        </h1>
-        <div class="page-actions">
-            <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> 返回
-            </a>
-            {% if current_user.role == 'tech_support' %}
-                {% if conversation.status == 'active' %}
-                <form method="POST" action="{{ url_for('conversation.mark_attention', conversation_id=conversation.id) }}" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-exclamation-triangle"></i> 标记需关注
-                    </button>
-                </form>
-                <button type="button" class="btn btn-danger" onclick="showCloseModal()">
-                    <i class="fas fa-times-circle"></i> 关闭会话
-                </button>
-                {% elif conversation.status == 'needs_attention' %}
-                <button type="button" class="btn btn-success" onclick="showCloseModal()">
-                    <i class="fas fa-check-circle"></i> 解决并关闭
-                </button>
-                {% elif conversation.status == 'closed' %}
-                <form method="POST" action="{{ url_for('conversation.reopen_conversation', conversation_id=conversation.id) }}" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-redo"></i> 重新打开
-                    </button>
-                </form>
-                {% endif %}
-            {% endif %}
+<div class="chat-layout">
+  <div class="chat-sidebar">
+    <div class="chat-sidebar-header">
+      <h3>Conversations</h3>
+      <span class="text-sm text-muted">{{ conversations_for_sidebar|length if conversations_for_sidebar else 0 }}</span>
+    </div>
+    <div class="chat-sidebar-list">
+      {% set sidebar_convs = conversations_for_sidebar if conversations_for_sidebar else [] %}
+      {% for c in sidebar_convs %}
+      <a href="{{ url_for('conversation.view', conversation_id=c.id) }}" style="text-decoration:none;color:inherit">
+        <div class="chat-list-item {% if c.id == conversation.id %}active{% endif %}">
+          <div class="avatar">{{ c.user.username[0]|upper if c.user else 'U' }}</div>
+          <div class="item-body">
+            <div class="item-top">
+              <span class="item-name">#{{ c.id }}</span>
+              <span class="item-time">{% if c.last_message_at %}{{ c.last_message_at.strftime('%H:%M') }}{% else %}{{ c.created_at.strftime('%m/%d') }}{% endif %}</span>
+            </div>
+            <div class="item-preview">{{ c.status }}</div>
+          </div>
         </div>
+      </a>
+      {% endfor %}
+      <form method="POST" action="{{ url_for('conversation.create_conversation') }}" style="padding:12px 16px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="btn btn-primary btn-sm" style="width:100%">+ New Conversation</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="chat-main">
+    <div class="chat-main-header">
+      <div class="customer-info">
+        <div class="avatar" style="width:32px;height:32px;font-size:13px">{{ conversation.user.username[0]|upper if conversation.user else 'U' }}</div>
+        <div>
+          <div style="font-weight:600;font-size:14px">#{{ conversation.id }} <span class="text-muted" style="font-weight:400">— {{ conversation.user.username if conversation.user else 'User' }}</span></div>
+          <div class="text-sm text-muted">{{ conversation.status }} &middot; {{ conversation.created_at.strftime('%Y-%m-%d') }}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        {% if current_user.role == 'tech_support' %}
+          {% if conversation.status == 'active' %}
+          <form method="POST" action="{{ url_for('conversation.mark_attention', conversation_id=conversation.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="submit" class="btn btn-ghost btn-sm">Flag</button>
+          </form>
+          <button class="btn btn-danger btn-sm" onclick="showCloseModal()">Close</button>
+          {% elif conversation.status == 'needs_attention' %}
+          <button class="btn btn-success btn-sm" onclick="showCloseModal()">Resolve & Close</button>
+          {% elif conversation.status == 'closed' %}
+          <form method="POST" action="{{ url_for('conversation.reopen_conversation', conversation_id=conversation.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="submit" class="btn btn-primary btn-sm">Reopen</button>
+          </form>
+          {% endif %}
+        {% endif %}
+      </div>
     </div>
 
-    <!-- Status Alert -->
     {% if conversation.status == 'needs_attention' %}
-    <div class="flash-message warning">
-        <i class="fas fa-exclamation-triangle"></i>
-        <div>
-            <strong>此会话需要技术支持关注！</strong>
-            <p>技术支持团队将尽快为您处理</p>
-        </div>
+    <div style="background:var(--warning-light);color:#c47a00;padding:8px 20px;font-size:13px;font-weight:500;border-bottom:1px solid var(--border)">
+      <i class="fas fa-exclamation-triangle"></i> This conversation needs attention from support team.
     </div>
     {% elif conversation.status == 'closed' %}
-    <div class="flash-message info">
-        <i class="fas fa-info-circle"></i>
-        <div>
-            <strong>此会话已关闭</strong>
-            <p>如需继续咨询，请重新打开会话或创建新会话</p>
-        </div>
+    <div style="background:var(--accent-light);color:var(--accent);padding:8px 20px;font-size:13px;font-weight:500;border-bottom:1px solid var(--border)">
+      <i class="fas fa-info-circle"></i> This conversation is closed.
     </div>
     {% endif %}
 
-    <!-- Ticket Status Bar (for user) -->
     {% if current_user.role != 'tech_support' %}
-    <div class="ticket-status-bar" id="ticketStatusBar">
-        <div class="ticket-status-info">
-            <span class="status-badge" id="ticketStatusBadge">
-                <i class="fas fa-circle"></i> 进行中
-            </span>
-            <span class="round-count" id="roundCount">
-                <i class="fas fa-comments"></i> 第 <strong id="currentRound">0</strong> 轮
-            </span>
-        </div>
-        <div class="ticket-actions">
-            <button type="button" class="btn btn-warning btn-sm" id="handoffBtn" style="display: none;"
-                    onclick="requestHumanHandoff()">
-                <i class="fas fa-headset"></i> 人工介入
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" id="closeTicketBtn"
-                    onclick="confirmCloseTicket()">
-                <i class="fas fa-times-circle"></i> 关闭
-            </button>
-        </div>
+    <div class="ticket-bar">
+      <div class="tb-item"><span class="tb-label">Ticket</span> <span class="text-mono">#{{ conversation.id }}</span></div>
+      <div class="tb-item"><span class="tb-label">Status</span> <span id="ticketStatusBadge" class="badge badge-blue">Active</span></div>
+      <div class="tb-item"><span class="tb-label">Round</span> <strong id="currentRound">0</strong></div>
+      <button class="btn btn-ghost btn-sm" id="handoffBtn" style="display:none;margin-left:auto" onclick="requestHumanHandoff()">Request Human</button>
+      <button class="btn btn-ghost btn-sm" onclick="confirmCloseTicket()">Close Ticket</button>
     </div>
     {% endif %}
 
-    <!-- Chat Container -->
-    <div class="chat-container">
-        <div class="chat-messages" id="chatMessages">
-            {% for message in messages %}
-            <div class="chat-message {{ message.sender_type }}">
-                <div class="chat-avatar">
-                    {% if message.sender_type == 'user' %}
-                        U
-                    {% elif message.sender_type == 'ai' %}
-                        AI
-                    {% else %}
-                        T
-                    {% endif %}
-                </div>
-                <div class="chat-message-bubble">
-                    <div class="chat-message-meta">
-                        <span class="chat-message-sender">
-                            {% if message.sender_type == 'user' %}
-                                <i class="fas fa-user"></i> 您
-                            {% elif message.sender_type == 'ai' %}
-                                <i class="fas fa-sparkles"></i> AI 助手
-                            {% else %}
-                                <i class="fas fa-headset"></i> 技术支持
-                            {% endif %}
-                        </span>
-                        <span class="chat-message-time">
-                            {{ message.timestamp.strftime('%H:%M') }}
-                        </span>
-                    </div>
-                    <div class="chat-message-content">
-                        {{ message.content }}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
+    <div class="chat-messages" id="chatMessages">
+      {% for message in messages %}
+      {% if message.sender_type == 'user' %}
+      <div class="chat-msg outgoing">
+        <div class="msg-avatar">{{ current_user.username[0]|upper }}</div>
+        <div>
+          <div class="msg-bubble">{{ message.content }}</div>
+          <div class="msg-time">{{ message.timestamp.strftime('%H:%M') }}</div>
         </div>
-
-        <!-- Message Input -->
-        {% if conversation.status != 'closed' %}
-        <div class="chat-input-container">
-            <form method="POST" action="{{ url_for('conversation.send_message', conversation_id=conversation.id) }}" class="chat-input-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <textarea name="content" class="form-textarea"
-                          placeholder="输入消息..."
-                          required
-                          rows="1"></textarea>
-                <button type="submit" class="btn chat-submit-btn">
-                    <i class="fas fa-paper-plane"></i>
-                    <span>发送</span>
-                </button>
-            </form>
+      </div>
+      {% elif message.sender_type == 'ai' %}
+      <div class="chat-msg incoming">
+        <div class="msg-avatar">AI</div>
+        <div>
+          <div class="msg-bubble">{{ message.content }}</div>
+          <div class="msg-time">{{ message.timestamp.strftime('%H:%M') }}</div>
         </div>
-        {% else %}
-        <div class="flash-message info">
-            <i class="fas fa-info-circle"></i>
-            <div>
-                <strong>会话已关闭</strong>
-                <p>如需继续咨询，请重新打开会话或创建新会话。</p>
-            </div>
+      </div>
+      {% else %}
+      <div class="chat-msg incoming">
+        <div class="msg-avatar">TS</div>
+        <div>
+          <div class="msg-bubble">{{ message.content }}</div>
+          <div class="msg-time">{{ message.timestamp.strftime('%H:%M') }}</div>
         </div>
-        {% endif %}
+      </div>
+      {% endif %}
+      {% endfor %}
     </div>
 
-    <!-- Scroll to Bottom Button -->
-    <button type="button" class="scroll-to-bottom-btn" id="scrollToBottomBtn" onclick="scrollToBottom()" style="display: none;">
-        <i class="fas fa-chevron-down"></i>
-    </button>
-</div>
-
-<!-- Scroll to bottom script -->
-<script>
-const conversationId = {{ conversation.id }};
-let currentRound = 0;
-
-// Load ticket status on page load
-async function loadTicketStatus() {
-    try {
-        const resp = await fetch(`/api/ticket/${conversationId}/status`);
-        const data = await resp.json();
-
-        if (data.success) {
-            currentRound = data.round_count;
-
-            // Update UI
-            document.getElementById('currentRound').textContent = currentRound;
-
-            // Show handoff button if ticket is open (always show, let user decide)
-            if (data.status === 'open') {
-                document.getElementById('handoffBtn').style.display = 'block';
-            }
-
-            // Update status badge
-            updateStatusBadge(data.status);
-        }
-    } catch (err) {
-        console.error('Failed to load ticket status:', err);
-    }
-}
-
-function updateStatusBadge(status) {
-    const badge = document.getElementById('ticketStatusBadge');
-    if (!badge) return;
-
-    const statusConfig = {
-        'open': { icon: 'fa-circle', text: '进行中', color: 'status-active' },
-        'pending_human': { icon: 'fa-clock', text: '待人工处理', color: 'status-pending' },
-        'closed': { icon: 'fa-check-circle', text: '已关闭', color: 'status-closed' }
-    };
-
-    const config = statusConfig[status] || statusConfig['open'];
-    badge.className = `status-badge ${config.color}`;
-    badge.innerHTML = `<i class="fas ${config.icon}"></i> ${config.text}`;
-}
-
-// Request human handoff
-async function requestHumanHandoff() {
-    if (!confirm('确定要请求人工介入吗？技术支持将尽快为您服务。')) {
-        return;
-    }
-
-    try {
-        const resp = await fetch(`/api/ticket/${conversationId}/handoff`, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        const data = await resp.json();
-
-        if (data.success) {
-            alert('已请求人工介入，技术支持将尽快为您服务');
-            document.getElementById('handoffBtn').style.display = 'none';
-            updateStatusBadge('pending_human');
-        } else {
-            alert(data.message || '请求失败，请稍后重试');
-        }
-    } catch (err) {
-        console.error('Handoff error:', err);
-        alert('请求失败，请稍后重试');
-    }
-}
-
-// Confirm close ticket
-function confirmCloseTicket() {
-    const modal = document.getElementById('closeTicketModal');
-    if (modal) {
-        modal.classList.add('open');
-    }
-}
-
-// Close ticket modal
-function hideCloseTicketModal() {
-    const modal = document.getElementById('closeTicketModal');
-    if (modal) {
-        modal.classList.remove('open');
-    }
-}
-
-// Close ticket via AJAX
-async function closeTicket(generateFaq) {
-    try {
-        const resp = await fetch(`/api/ticket/${conversationId}/close`, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ generate_faq: generateFaq })
-        });
-        const data = await resp.json();
-
-        if (data.success) {
-            alert('工单已关闭');
-            location.reload();
-        } else {
-            alert(data.message || '关闭失败，请稍后重试');
-        }
-    } catch (err) {
-        console.error('Close ticket error:', err);
-        alert('关闭失败，请稍后重试');
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const chatMessages = document.getElementById('chatMessages');
-    const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
-
-    // Scroll to bottom immediately
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    // Show/hide scroll-to-bottom button based on scroll position
-    chatMessages.addEventListener('scroll', function() {
-        const threshold = 100; // Show button when scrolled up more than 100px
-        const scrollDistance = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight;
-
-        if (scrollDistance > threshold) {
-            scrollToBottomBtn.style.display = 'flex';
-        } else {
-            scrollToBottomBtn.style.display = 'none';
-        }
-    });
-
-    // Scroll to bottom after images load
-    chatMessages.addEventListener('load', function() {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }, true);
-
-    // Load ticket status
-    loadTicketStatus();
-});
-
-// Scroll to bottom function
-function scrollToBottom() {
-    const chatMessages = document.getElementById('chatMessages');
-    chatMessages.scrollTo({
-        top: chatMessages.scrollHeight,
-        behavior: 'smooth'
-    });
-}
-
-function showCloseModal() {
-    const modal = document.getElementById('closeModal');
-    modal.classList.add('open');
-}
-
-function hideCloseModal() {
-    const modal = document.getElementById('closeModal');
-    modal.classList.remove('open');
-}
-
-// Close modal when clicking outside
-window.onclick = function(event) {
-    const modal = document.getElementById('closeModal');
-    const closeTicketModal = document.getElementById('closeTicketModal');
-    if (event.target == modal) {
-        hideCloseModal();
-    }
-    if (event.target == closeTicketModal) {
-        hideCloseTicketModal();
-    }
-}
-</script>
-
-<!-- Close Confirmation Modal (Tech Support) -->
-<div id="closeModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>关闭会话</h3>
-            <button type="button" class="modal-close" onclick="hideCloseModal()" aria-label="关闭">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="modal-body">
-            <p>确认要关闭此会话吗？</p>
-            <div class="faq-generation-option">
-                <label>
-                    <input type="checkbox" name="generate_faq" id="generateFaq">
-                    <div>
-                        <strong>生成 FAQ</strong>
-                        <p class="faq-generation-description">
-                            从对话中提取 Q&A 对并录入知识库，形成正向循环
-                        </p>
-                    </div>
-                </label>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="hideCloseModal()">取消</button>
-            <form method="POST" action="{{ url_for('conversation.close_conversation', conversation_id=conversation.id) }}" style="display: inline;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <input type="hidden" name="generate_faq" id="generateFaqValue" value="off">
-                <button type="submit" class="btn btn-danger" onclick="document.getElementById('generateFaqValue').value = document.getElementById('generateFaq').checked ? 'on' : 'off'">
-                    确认关闭
-                </button>
-            </form>
-        </div>
+    {% if conversation.status != 'closed' %}
+    <div class="chat-composer">
+      <form method="POST" action="{{ url_for('conversation.send_message', conversation_id=conversation.id) }}" style="display:flex;gap:10px;align-items:flex-end;width:100%">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <textarea name="content" rows="1" placeholder="Type a reply..." required></textarea>
+        <button type="submit" class="btn btn-primary btn-sm">Send</button>
+      </form>
     </div>
+    {% endif %}
+  </div>
 </div>
 
-<!-- User Close Ticket Modal -->
-<div id="closeTicketModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>关闭工单</h3>
-            <button type="button" class="modal-close" onclick="hideCloseTicketModal()" aria-label="关闭">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="modal-body">
-            <p>确认要关闭此工单吗？</p>
-            <p class="close-ticket-description">
-                关闭后，您将无法继续发送消息。如需继续咨询，请创建新工单。
-            </p>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="hideCloseTicketModal()">取消</button>
-            <button type="button" class="btn btn-danger" onclick="closeTicket(false)">
-                确认关闭
-            </button>
-        </div>
+<div class="modal-overlay" id="closeModal" style="display:none">
+  <div class="modal">
+    <h3>Close Conversation</h3>
+    <p>Are you sure you want to close this conversation?</p>
+    <div style="padding:12px 0">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+        <input type="checkbox" id="generateFaq" style="margin-top:2px;accent-color:var(--accent)">
+        <div><strong style="font-size:14px">Generate FAQ</strong><p style="font-size:12px;color:var(--muted);margin:0">Extract Q&A pairs from conversation and save to knowledge base</p></div>
+      </label>
     </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="hideCloseModal()">Cancel</button>
+      <form method="POST" action="{{ url_for('conversation.close_conversation', conversation_id=conversation.id) }}" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="generate_faq" id="generateFaqValue" value="off">
+        <button type="submit" class="btn btn-danger" onclick="document.getElementById('generateFaqValue').value=document.getElementById('generateFaq').checked?'on':'off'">Confirm Close</button>
+      </form>
+    </div>
+  </div>
 </div>
 
-<style>
-/* ========================================
-   Conversation Page - Apple Style
-   ======================================== */
-
-/* Prevent body scroll on conversation page */
-body {
-    overflow: hidden;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Main element - fill remaining space */
-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding-top: 0;
-    min-height: 0;
-    overflow: hidden;
-}
-
-/* Page wrapper - fill viewport */
-.container.container-md {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 var(--spacing-24);
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-/* Page Header - Apple Hero Style */
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-24) 0 var(--spacing-20) 0;
-    margin-bottom: 0;
-    border-bottom: 1px solid var(--sk-border-light);
-    flex-shrink: 0;
-}
-
-.page-title {
-    font-family: var(--font-display);
-    font-size: var(--font-size-section);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: -0.2px;
-    color: var(--sk-text-primary);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-10);
-}
-
-.page-title i {
-    color: var(--sk-focus-color);
-}
-
-/* Status Bar - Apple Style (light, not dark) */
-.ticket-status-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-14) var(--spacing-20);
-    background: var(--bg-card);
-    border-radius: var(--radius-large);
-    margin-bottom: var(--spacing-17);
-    border: 1px solid var(--sk-border-light);
-    box-shadow: var(--shadow-card);
-    flex-shrink: 0;
-}
-
-.ticket-status-info {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-20);
-}
-
-/* Status Badge - Pill Shape, Subtle */
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--spacing-6);
-    padding: var(--spacing-5) var(--spacing-12);
-    border-radius: var(--radius-pill);
-    font-size: var(--font-size-micro);
-    font-weight: var(--font-weight-medium);
-    background: var(--sk-light-gray);
-    color: var(--sk-text-primary);
-}
-
-.status-badge.status-active {
-    background: rgba(52, 199, 89, 0.12);
-    color: var(--sk-success);
-}
-
-.status-badge.status-pending {
-    background: rgba(255, 149, 0, 0.12);
-    color: var(--sk-warning);
-}
-
-.status-badge.status-closed {
-    background: rgba(142, 142, 147, 0.12);
-    color: var(--sk-text-tertiary);
-}
-
-.round-count {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--spacing-6);
-    font-size: var(--font-size-micro);
-    color: var(--sk-text-secondary);
-}
-
-.round-count strong {
-    font-size: var(--font-size-body);
-    font-weight: var(--font-weight-semibold);
-}
-
-.ticket-actions {
-    display: flex;
-    gap: var(--spacing-10);
-}
-
-.ticket-actions .btn-sm {
-    background: var(--sk-light-gray);
-    color: var(--sk-text-primary);
-    border: 1px solid var(--sk-border-light);
-}
-
-.ticket-actions .btn-sm:hover {
-    background: var(--sk-button-secondary-hover);
-}
-
-.ticket-actions .btn-warning {
-    background: rgba(255, 149, 0, 0.1);
-    color: var(--sk-warning);
-    border: 1px solid rgba(255, 149, 0, 0.2);
-}
-
-.ticket-actions .btn-warning:hover {
-    background: rgba(255, 149, 0, 0.2);
-}
-
-/* Chat Container - Fixed Height, Scrollable Messages */
-.chat-container {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    padding-bottom: 0;
-    position: relative;
-}
-
-.chat-messages {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-17);
-    padding: var(--spacing-24);
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-}
-
-/* Custom Scrollbar for chat messages */
-.chat-messages::-webkit-scrollbar {
-    width: 6px;
-}
-
-.chat-messages::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-    background: var(--sk-border-color);
-    border-radius: var(--radius-pill);
-    opacity: 0.5;
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover {
-    background: var(--sk-text-secondary);
-}
-
-/* Chat Message - Apple iMessage Inspired */
-.chat-message {
-    display: flex;
-    gap: var(--spacing-17);
-    animation: messageSlideIn 0.3s ease-out;
-}
-
-@keyframes messageSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.chat-message.user {
-    flex-direction: row-reverse;
-}
-
-.chat-message-bubble {
-    max-width: 75%;
-    padding: var(--spacing-14) var(--spacing-17);
-    border-radius: 20px;
-    background-color: var(--sk-light-gray);
-    color: var(--sk-text-primary);
-    font-size: var(--font-size-body);
-    line-height: var(--line-height-body);
-    letter-spacing: var(--letter-spacing-body);
-}
-
-.chat-message.user .chat-message-bubble {
-    background-color: var(--sk-focus-color);
-    color: var(--sk-white);
-    border-bottom-right-radius: 4px;
-}
-
-.chat-message.ai .chat-message-bubble {
-    background-color: var(--sk-light-gray);
-    border-bottom-left-radius: 4px;
-}
-
-.chat-message.tech_support .chat-message-bubble {
-    background-color: rgba(52, 199, 89, 0.08);
-    border: 1px solid rgba(52, 199, 89, 0.2);
-    border-bottom-left-radius: 4px;
-}
-
-/* Message Meta - Sender & Time */
-.chat-message-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-8);
-    margin-bottom: var(--spacing-6);
-    font-size: var(--font-size-micro);
-    font-weight: var(--font-weight-medium);
-    color: var(--sk-text-tertiary);
-}
-
-.chat-message.user .chat-message-meta {
-    color: rgba(255, 255, 255, 0.7);
-    justify-content: flex-end;
-}
-
-.chat-message-meta .chat-message-sender {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-5);
-}
-
-.chat-message-meta i {
-    font-size: 10px;
-}
-
-.chat-message-time {
-    opacity: 0.8;
-}
-
-/* Message Content */
-.chat-message-content {
-    line-height: var(--line-height-body);
-}
-
-.chat-message-content p {
-    margin-bottom: var(--spacing-10);
-}
-
-.chat-message-content p:last-child {
-    margin-bottom: 0;
-}
-
-.chat-message-content pre {
-    background-color: rgba(0, 0, 0, 0.05);
-    padding: var(--spacing-14);
-    border-radius: var(--radius-standard);
-    overflow-x: auto;
-    margin: var(--spacing-10) 0;
-    font-size: var(--font-size-micro);
-}
-
-.chat-message.user .chat-message-content pre {
-    background-color: rgba(255, 255, 255, 0.15);
-}
-
-.chat-message-content code {
-    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-    font-size: var(--font-size-micro);
-}
-
-/* Avatar - Circle with Initial */
-.chat-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: var(--radius-circle);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-micro);
-    font-weight: var(--font-weight-semibold);
-    flex-shrink: 0;
-}
-
-.chat-message.user .chat-avatar {
-    background: linear-gradient(135deg, var(--sk-focus-color), #005bb5);
-    color: var(--sk-white);
-}
-
-.chat-message.ai .chat-avatar {
-    background: linear-gradient(135deg, #86868b, #424245);
-    color: var(--sk-white);
-}
-
-.chat-message.tech_support .chat-avatar {
-    background: linear-gradient(135deg, var(--sk-success), #248a3d);
-    color: var(--sk-white);
-}
-
-/* Source Citation */
-.source-citation {
-    margin-top: var(--spacing-14);
-    padding-top: var(--spacing-14);
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-    font-size: var(--font-size-micro);
-    color: var(--sk-text-tertiary);
-}
-
-.chat-message.user .source-citation {
-    border-top-color: rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.7);
-}
-
-.source-citation a {
-    color: var(--sk-body-link-color);
-}
-
-.chat-message.user .source-citation a {
-    color: var(--sk-white);
-    text-decoration: underline;
-}
-
-/* Chat Input - Fixed at Bottom */
-.chat-input-container {
-    flex-shrink: 0;
-    background-color: var(--bg-card);
-    padding: var(--spacing-17) var(--spacing-24);
-    border-top: 1px solid var(--sk-border-light);
-    margin-top: 0;
-}
-
-.chat-input-form {
-    display: flex;
-    gap: var(--spacing-10);
-    align-items: flex-end;
-}
-
-.form-textarea {
-    flex: 1;
-    padding: var(--spacing-11) var(--spacing-17);
-    border: 1px solid var(--sk-border-color);
-    border-radius: var(--radius-standard);
-    font-family: var(--font-text);
-    font-size: var(--font-size-body);
-    color: var(--sk-text-primary);
-    background-color: var(--sk-white);
-    resize: none;
-    min-height: 56px;
-    max-height: 160px;
-    letter-spacing: var(--letter-spacing-body);
-    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.form-textarea::placeholder {
-    color: var(--sk-text-tertiary);
-}
-
-.form-textarea:focus {
-    outline: none;
-    border-color: var(--sk-focus-color);
-    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15);
-}
-
-.chat-submit-btn {
-    padding: var(--spacing-11) var(--spacing-20);
-    background-color: var(--sk-focus-color);
-    color: var(--sk-white);
-    border: none;
-    border-radius: var(--radius-standard);
-    font-family: var(--font-text);
-    font-size: var(--font-size-button);
-    font-weight: var(--font-weight-medium);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-8);
-    height: 44px;
-}
-
-.chat-submit-btn:hover:not(:disabled) {
-    background-color: var(--sk-button-primary-hover);
-    transform: scale(1.02);
-}
-
-.chat-submit-btn:active:not(:disabled) {
-    transform: scale(0.98);
-}
-
-.chat-submit-btn:focus {
-    outline: none;
-    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.3);
-}
-
-.chat-submit-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-/* Typing Indicator */
-.typing-indicator {
-    display: flex;
-    gap: var(--spacing-4);
-    padding: var(--spacing-14);
-    align-items: center;
-}
-
-.typing-indicator span {
-    width: 8px;
-    height: 8px;
-    background-color: var(--sk-text-tertiary);
-    border-radius: var(--radius-circle);
-    animation: bounce 1.4s infinite;
-}
-
-.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1); }
-}
-
-/* Scroll to Bottom Button */
-.scroll-to-bottom-btn {
-    position: absolute;
-    bottom: 80px;
-    right: 40px;
-    width: 44px;
-    height: 44px;
-    border-radius: var(--radius-circle);
-    background-color: var(--sk-focus-color);
-    color: var(--sk-white);
-    border: none;
-    box-shadow: 0 4px 16px rgba(0, 113, 227, 0.4);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all var(--transition-fast);
-    z-index: 100;
-}
-
-.scroll-to-bottom-btn:hover {
-    background-color: var(--sk-button-primary-hover);
-    transform: scale(1.05);
-}
-
-.scroll-to-bottom-btn:active {
-    transform: scale(0.95);
-}
-
-.scroll-to-bottom-btn i {
-    font-size: var(--font-size-body);
-    animation: bounceIn 0.3s ease-out;
-}
-
-@keyframes bounceIn {
-    from {
-        transform: translateY(-5px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* Modal - Apple Style */
-.modal {
-    position: fixed;
-    z-index: 2000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.5);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(5px);
-}
-
-.modal.open {
-    display: flex;
-    animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.modal-content {
-    background-color: var(--bg-card);
-    margin: auto;
-    padding: 0;
-    border-radius: var(--radius-large);
-    width: 90%;
-    max-width: 520px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes modalSlideIn {
-    from {
-        transform: translateY(-30px) scale(0.95);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-    }
-}
-
-.modal-header {
-    padding: var(--spacing-20) var(--spacing-24);
-    border-bottom: 1px solid var(--sk-border-light);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: var(--sk-text-primary);
-    font-size: var(--font-size-card-title);
-    font-weight: var(--font-weight-semibold);
-    font-family: var(--font-display);
-    letter-spacing: -0.1px;
-}
-
-.modal-close {
-    color: var(--sk-text-tertiary);
-    font-size: var(--font-size-body);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-circle);
-    background: none;
-    border: none;
-}
-
-.modal-close:hover {
-    color: var(--sk-text-primary);
-    background-color: var(--sk-button-default-light);
-}
-
-.modal-close i {
-    font-size: 14px;
-}
-
-.modal-body {
-    padding: var(--spacing-24);
-}
-
-.modal-body p {
-    font-size: var(--font-size-body);
-    color: var(--sk-text-secondary);
-    line-height: var(--line-height-body);
-    margin: 0;
-}
-
-.modal-footer {
-    padding: var(--spacing-20) var(--spacing-24);
-    border-top: 1px solid var(--sk-border-light);
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--spacing-10);
-    background-color: var(--sk-light-gray);
-    border-bottom-left-radius: var(--radius-large);
-    border-bottom-right-radius: var(--radius-large);
-}
-
-/* FAQ Generation Option */
-.faq-generation-option {
-    margin-top: var(--spacing-20);
-    padding: var(--spacing-20);
-    background: var(--sk-light-gray);
-    border-radius: var(--radius-standard);
-    border: 1px solid var(--sk-border-light);
-}
-
-.faq-generation-option label {
-    cursor: pointer;
-    display: flex;
-    align-items: flex-start;
-    gap: var(--spacing-12);
-}
-
-.faq-generation-option input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    margin-top: 2px;
-    accent-color: var(--sk-focus-color);
-}
-
-.faq-generation-option strong {
-    color: var(--sk-text-primary);
-    font-size: var(--font-size-body);
-    font-weight: var(--font-weight-medium);
-    display: block;
-    margin-bottom: var(--spacing-5);
-}
-
-.faq-generation-description {
-    color: var(--sk-text-secondary);
-    font-size: var(--font-size-micro);
-    line-height: var(--line-height-body);
-    margin: 0;
-}
-
-/* Close Ticket Description */
-.close-ticket-description {
-    color: var(--sk-text-secondary);
-    font-size: var(--font-size-body);
-    margin-top: var(--spacing-10);
-    line-height: var(--line-height-body);
-}
-
-/* Flash Messages - Apple Alert Style */
-.flash-message {
-    padding: var(--spacing-17) var(--spacing-20);
-    margin-bottom: var(--spacing-20);
-    border-radius: var(--radius-large);
-    font-size: var(--font-size-body);
-    display: flex;
-    align-items: flex-start;
-    gap: var(--spacing-12);
-    border: 1px solid transparent;
-}
-
-.flash-message.error,
-.flash-message.danger {
-    background-color: rgba(255, 59, 48, 0.08);
-    color: var(--sk-text-error);
-    border-color: rgba(255, 59, 48, 0.2);
-}
-
-.flash-message.success {
-    background-color: rgba(52, 199, 89, 0.08);
-    color: var(--sk-text-success);
-    border-color: rgba(52, 199, 89, 0.2);
-}
-
-.flash-message.warning {
-    background-color: rgba(255, 149, 0, 0.08);
-    color: var(--sk-text-warning);
-    border-color: rgba(255, 149, 0, 0.2);
-}
-
-.flash-message.info {
-    background-color: rgba(0, 113, 227, 0.08);
-    color: var(--sk-text-info);
-    border-color: rgba(0, 113, 227, 0.2);
-}
-
-.flash-message i {
-    font-size: var(--font-size-section);
-    flex-shrink: 0;
-}
-
-.flash-message div {
-    flex: 1;
-}
-
-.flash-message strong {
-    font-weight: var(--font-weight-semibold);
-    display: block;
-    margin-bottom: var(--spacing-5);
-}
-
-.flash-message p {
-    margin: 0;
-    opacity: 0.9;
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-    .container.container-md {
-        padding: 0 var(--spacing-17);
-    }
-
-    .chat-messages {
-        padding: var(--spacing-17);
-    }
-
-    .chat-message-bubble {
-        max-width: 85%;
-    }
-
-    .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--spacing-17);
-    }
-
-    .page-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--spacing-10);
-    }
-
-    .ticket-status-bar {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--spacing-14);
-    }
-
-    .ticket-actions {
-        width: 100%;
-        justify-content: flex-start;
-    }
-
-    .chat-input-container {
-        padding: var(--spacing-14) var(--spacing-17);
-    }
-
-    .chat-submit-btn span {
-        display: none;
-    }
-
-    .chat-submit-btn {
-        padding: var(--spacing-11);
-    }
-
-    .scroll-to-bottom-btn {
-        bottom: 70px;
-        right: 20px;
-        width: 40px;
-        height: 40px;
-    }
-}
-</style>
+<div class="modal-overlay" id="closeTicketModal" style="display:none">
+  <div class="modal">
+    <h3>Close Ticket</h3>
+    <p>Are you sure? You won't be able to send further messages.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="hideCloseTicketModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="closeTicket()">Confirm Close</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
-{% block footer %}{% endblock %}
+{% block extra_js %}
+<script>
+var conversationId = {{ conversation.id }};
+function showCloseModal(){document.getElementById('closeModal').style.display='flex';}
+function hideCloseModal(){document.getElementById('closeModal').style.display='none';}
+function confirmCloseTicket(){document.getElementById('closeTicketModal').style.display='flex';}
+function hideCloseTicketModal(){document.getElementById('closeTicketModal').style.display='none';}
+
+async function closeTicket(){
+    try{
+        var resp=await fetch('/api/ticket/'+conversationId+'/close',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Content-Type':'application/json'},body:JSON.stringify({generate_faq:false})});
+        var data=await resp.json();
+        if(data.success){alert('Ticket closed');location.reload();}
+        else alert(data.message||'Failed');
+    }catch(err){console.error(err);alert('Error closing ticket');}
+}
+
+async function loadTicketStatus(){
+    try{
+        var resp=await fetch('/api/ticket/'+conversationId+'/status');
+        var data=await resp.json();
+        if(data.success){
+            document.getElementById('currentRound').textContent=data.round_count;
+            if(data.status==='open') document.getElementById('handoffBtn').style.display='inline-flex';
+            var badge=document.getElementById('ticketStatusBadge');
+            if(badge){
+                if(data.status==='pending_human'){badge.className='badge badge-amber';badge.textContent='Pending Human';}
+                else if(data.status==='closed'){badge.className='badge badge-gray';badge.textContent='Closed';}
+            }
+        }
+    }catch(err){console.error(err);}
+}
+
+async function requestHumanHandoff(){
+    if(!confirm('Request human support?'))return;
+    try{
+        var resp=await fetch('/api/ticket/'+conversationId+'/handoff',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest'}});
+        var data=await resp.json();
+        if(data.success){alert('Request submitted');document.getElementById('handoffBtn').style.display='none';loadTicketStatus();}
+        else alert(data.message||'Failed');
+    }catch(err){console.error(err);}
+}
+
+window.onclick=function(e){if(e.target==document.getElementById('closeModal'))hideCloseModal();if(e.target==document.getElementById('closeTicketModal'))hideCloseTicketModal();};
+
+document.addEventListener('DOMContentLoaded',function(){
+    var msgs=document.getElementById('chatMessages');
+    if(msgs){msgs.scrollTop=msgs.scrollHeight;}
+    {% if current_user.role != 'tech_support' %}loadTicketStatus();{% endif %}
+    var ta=document.querySelector('.chat-composer textarea');
+    if(ta){ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});}
+});
+</script>
+{% endblock %}

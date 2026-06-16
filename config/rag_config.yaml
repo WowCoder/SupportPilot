@@ -6,12 +6,15 @@ agent:
   max_iterations: 3
   timeout_seconds: 30
   temperature: 0.3
+  max_retries: 2               # Max self-correction retries per query
+  relevance_threshold: 0.3     # Min relevance score to skip re-query
+  faithfulness_threshold: 0.8  # Min faithfulness ratio to accept answer
 
 # Query router configuration
 router:
   # Mode: "simple" (all queries use simple retrieval) or "agentic" (all queries use agent) or "auto" (route based on intent)
   mode: auto
-  # Keywords that trigger agentic routing
+  # Keywords that trigger agentic routing (fast path, before LLM routing)
   agentic_keywords:
     - "对比"
     - "比较"
@@ -20,6 +23,8 @@ router:
     - "分析"
     - "多跳"
     - "推理"
+  # Use LLM-based routing for queries that don't match keywords
+  use_llm_routing: true
 
 # Retrieval tools configuration
 tools:
@@ -36,11 +41,27 @@ tools:
   ensemble:
     enabled: true
     use_rrf: true
+    k: 10
 
 # Small-to-Big configuration
 small_to_big:
   parent_size: 2000  # Large chunk size for return
   child_size: 400    # Small chunk size for indexing
+
+# Query decomposition
+decomposition:
+  enabled: true
+  max_sub_queries: 4       # Max sub-queries to generate
+  min_query_length: 10     # Min chars to consider decomposition
+
+# Self-correction
+correction:
+  max_query_history: 5         # Anti-loop: max unique queries to track
+  refinement_strategies:       # Strategies to try in order
+    - expand_keywords
+    - narrow_scope
+    - rephrase_angle
+  max_retries: 2
 
 # Chat memory integration
 chat_memory:

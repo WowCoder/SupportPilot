@@ -9,9 +9,9 @@ import logging
 import os
 import tempfile
 
-from rag.service import rag_service
-from rag.cleaning import document_cleaner, CleaningOptions
-from rag.rag_utils import RAGUtils
+from rag.online.service import rag_service
+from rag.offline.cleaning import document_cleaner, CleaningOptions
+from rag.offline.pipeline import RAGUtils
 
 logger = logging.getLogger(__name__)
 api_bp = Blueprint('api', __name__, url_prefix='/api')

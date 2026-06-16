@@ -9,4 +9,6 @@ from .chat_memory import ChatMemory
 from .faq_entry import FAQEntry
 from .support_ticket import SupportTicket
 
-__all__ = ['User', 'Conversation', 'Message', 'Document', 'ChatMemory', 'FAQEntry', 'SupportTicket']
+from .rag_log import RagRetrievalLog, UserFeedback
+
+__all__ = ['User', 'Conversation', 'Message', 'Document', 'ChatMemory', 'FAQEntry', 'SupportTicket', 'RagRetrievalLog', 'UserFeedback']

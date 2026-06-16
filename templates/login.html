@@ -1,109 +1,31 @@
 {% extends "base.html" %}
+{% block title %}Login — SupportPilot{% endblock %}
 
-{% block title %}登录 - SupportPilot{% endblock %}
-
-{% block navbar %}{% endblock %}
-
-{% block content %}
+{% block body %}
 <div class="auth-container">
-    <div class="auth-header">
-        <h1 class="auth-title">
-            <i class="fas fa-headset"></i> SupportPilot
-        </h1>
-        <p class="auth-subtitle">欢迎回来，请登录您的账户</p>
+  <div class="auth-card">
+    <div class="auth-brand">
+      <span class="logo-dot"></span>
+      <h1>SupportPilot</h1>
+      <p>Sign in to your account</p>
     </div>
 
     <form method="POST" action="{{ url_for('auth.login') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-        <div class="form-group">
-            <label class="form-label" for="username">
-                <i class="fas fa-user"></i> 用户名
-            </label>
-            <input type="text" id="username" name="username" class="form-input"
-                   placeholder="请输入用户名" required autofocus>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label" for="password">
-                <i class="fas fa-lock"></i> 密码
-            </label>
-            <input type="password" id="password" name="password" class="form-input"
-                   placeholder="请输入密码" required>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block">
-            <i class="fas fa-sign-in-alt"></i> 登录
-        </button>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input id="username" name="username" class="form-input" type="text" placeholder="Enter your username" required autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input id="password" name="password" class="form-input" type="password" placeholder="Enter your password" required>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px" type="submit">Sign In</button>
     </form>
 
     <div class="auth-footer">
-        <p>还没有账户？<a href="{{ url_for('auth.register') }}">立即注册</a></p>
+      Don't have an account? <a href="{{ url_for('auth.register') }}">Create one</a>
     </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-    body {
-        background: linear-gradient(135deg, var(--bg-auth-gradient-start) 0%, var(--bg-auth-gradient-end) 100%);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-    }
-    main {
-        width: 100%;
-        display: flex;
-        justify-content: center;
-    }
-    .footer {
-        background: transparent;
-        color: rgba(0, 0, 0, 0.6);
-        border-top: none;
-        padding: var(--spacing-4);
-    }
-    .auth-container {
-        width: 100%;
-        max-width: 450px;
-        margin: 0;
-        padding: var(--spacing-24);
-        background-color: var(--bg-card);
-        border-radius: var(--radius-large);
-        box-shadow: var(--shadow-card);
-    }
-    .auth-header {
-        text-align: center;
-        margin-bottom: var(--spacing-24);
-    }
-    .auth-title {
-        font-family: var(--font-display);
-        font-size: var(--font-size-section);
-        font-weight: var(--font-weight-semibold);
-        color: var(--sk-text-primary);
-        margin-bottom: var(--spacing-8);
-    }
-    .auth-title i {
-        color: var(--sk-focus-color);
-    }
-    .auth-subtitle {
-        font-family: var(--font-text);
-        font-size: var(--font-size-body);
-        color: var(--sk-text-secondary);
-    }
-    .auth-footer {
-        text-align: center;
-        margin-top: var(--spacing-20);
-        font-size: var(--font-size-micro);
-        color: var(--sk-text-secondary);
-    }
-    .auth-footer a {
-        color: var(--sk-body-link-color);
-        font-weight: var(--font-weight-medium);
-    }
-    .auth-footer a:hover {
-        text-decoration: underline;
-    }
-</style>
 {% endblock %}

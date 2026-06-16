@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}RAG Dashboard — SupportPilot{% endblock %}
+
+{% block body %}
+<div class="topnav">
+  <div class="topnav-left">
+    <a class="topnav-brand" href="{{ url_for('main.index') }}"><span class="logo-dot"></span>SupportPilot</a>
+    <div class="topnav-links">
+      <a href="{{ url_for('main.index') }}">Dashboard</a>
+      <a href="{{ url_for('document.upload') }}">Documents</a>
+      <a href="{{ url_for('main.faq_manage') }}">FAQ</a>
+      <a href="{{ url_for('main.rag_dashboard') }}" class="active">RAG</a>
+    </div>
+  </div>
+  <div class="topnav-right">
+    <span class="badge badge-green" style="margin-inline-end:8px"><span class="status-dot online"></span>Online</span>
+    <a href="{{ url_for('auth.logout') }}" class="topnav-avatar" title="Logout" style="text-decoration:none">{{ current_user.username[0]|upper }}</a>
+  </div>
+</div>
+
+<div class="page-content">
+  <div class="section-header">
+    <div>
+      <h1><i class="fas fa-chart-line"></i> RAG Quality Dashboard</h1>
+      <p class="text-muted" style="margin-top:2px">Retrieval logs · User feedback · LLM evaluation</p>
+    </div>
+  </div>
+
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+      <div class="stat-icon blue"><i class="fas fa-search"></i></div>
+      <div class="stat-value" id="statTotalQueries">-</div>
+      <div class="stat-label">Total Queries</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="fas fa-chart-bar"></i></div>
+      <div class="stat-value" id="statAvgSimilarity">-</div>
+      <div class="stat-label">Avg Similarity</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber"><i class="fas fa-star"></i></div>
+      <div class="stat-value" id="statAvgJudge">-</div>
+      <div class="stat-label">LLM Judge Avg</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="fas fa-thumbs-up"></i></div>
+      <div class="stat-value" id="statPositiveRate">-</div>
+      <div class="stat-label">Positive Feedback</div>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <select id="routeFilter" class="form-input" style="width:auto;min-width:120px" onchange="loadPage(1)">
+      <option value="">All Routes</option><option value="simple">Simple</option><option value="agentic">Agentic</option>
+    </select>
+    <input type="number" id="minSimilarity" class="form-input" style="width:100px" placeholder="Min Sim" min="0" max="1" step="0.05" onchange="loadPage(1)">
+    <input id="searchInput" class="form-input" type="text" placeholder="Search queries..." onkeypress="if(event.key==='Enter')loadPage(1)">
+  </div>
+
+  <div class="data-table-wrap">
+    <table class="data-table" id="logsTable">
+      <thead><tr><th>Query</th><th>Results</th><th>Top-1</th><th>Judge</th><th>Latency</th><th>Route</th><th>Time</th></tr></thead>
+      <tbody id="logsTableBody"><tr><td colspan="7"><div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:44px;margin-bottom:12px"></i><p>Loading...</p></div></td></tr></tbody>
+    </table>
+  </div>
+  <div id="pagination" style="display:flex;justify-content:center;gap:12px;padding:16px"></div>
+
+  <div id="detailPanel" style="display:none;margin-top:20px">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Retrieval Detail</span>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('detailPanel').style.display='none'"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="card-body" id="detailContent"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var currentPage=1,activeLogId=null;
+function escapeHtml(t){if(!t)return'';var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+function simColor(s){return s>=0.7?'color:#34c759;font-weight:600':s>=0.4?'color:#ff9500;font-weight:600':'color:#ff3b30;font-weight:600';}
+
+async function loadPage(page){
+    currentPage=page||1;
+    var p=new URLSearchParams({page:currentPage,per_page:20});
+    var rt=document.getElementById('routeFilter').value;if(rt)p.append('route_type',rt);
+    var ms=document.getElementById('minSimilarity').value;if(ms)p.append('min_similarity',ms);
+    var sq=document.getElementById('searchInput').value;if(sq)p.append('search',sq);
+    try{
+        var r=await fetch('/api/rag-logs?'+p.toString());var d=await r.json();
+        if(d.success){renderTable(d.items);renderPagination(d.pagination);updateStats(d.stats);}
+    }catch(err){console.error(err);}
+}
+
+function updateStats(s){
+    document.getElementById('statTotalQueries').textContent=s.total_queries||0;
+    document.getElementById('statAvgSimilarity').textContent=s.avg_similarity||'0';
+    document.getElementById('statAvgJudge').textContent=s.avg_judge_score||'-';
+    document.getElementById('statPositiveRate').textContent=(s.positive_rate||0)+'%';
+}
+
+function renderTable(items){
+    var t=document.getElementById('logsTableBody');
+    if(!items||!items.length){t.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="empty-icon"><i class="fas fa-inbox"></i></div><h3>No logs yet</h3><p>RAG retrieval will be logged automatically</p></div></td></tr>';return;}
+    t.innerHTML=items.map(function(l){
+        var sim=l.top1_similarity||0;var avgJ='-';
+        if(l.judge_score)avgJ=((l.judge_score.relevance+l.judge_score.completeness+l.judge_score.noise)/3).toFixed(1);
+        var lo=sim<0.3||(l.judge_score&&parseFloat(avgJ)<3);
+        return '<tr onclick="showDetail('+l.id+')" style="cursor:pointer;'+(lo?'border-left:3px solid var(--danger);':'')+'">'+
+            '<td style="max-width:260px"><span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(l.query||'')+'</span></td>'+
+            '<td>'+l.result_count+'</td>'+
+            '<td><span style="'+simColor(sim)+'">'+sim.toFixed(3)+'</span></td>'+
+            '<td>'+avgJ+'</td><td class="text-sm text-muted">'+(l.duration_ms||'-')+'ms</td>'+
+            '<td><span class="badge '+(l.route_type==='agentic'?'badge-green':'badge-blue')+'">'+l.route_type+'</span></td>'+
+            '<td class="text-sm text-muted">'+(l.created_at?new Date(l.created_at).toLocaleString('zh-CN'):'-')+'</td></tr>';
+    }).join('');
+}
+
+function renderPagination(p){
+    var c=document.getElementById('pagination');
+    if(!p||p.pages<=1){c.innerHTML='';return;}
+    var h='';
+    if(p.has_prev)h+='<a href="javascript:void(0)" onclick="loadPage('+(p.page-1)+')" class="btn btn-ghost btn-sm">&larr; Prev</a>';
+    h+='<span class="text-sm text-muted" style="align-self:center">Page '+p.page+' / '+p.pages+'</span>';
+    if(p.has_next)h+='<a href="javascript:void(0)" onclick="loadPage('+(p.page+1)+')" class="btn btn-ghost btn-sm">Next &rarr;</a>';
+    c.innerHTML=h;
+}
+
+async function showDetail(id){
+    activeLogId=id;
+    try{
+        var r=await fetch('/api/rag-logs/'+id);var d=await r.json();
+        if(!d.success)return;
+        var l=d.log,c=document.getElementById('detailContent');
+        var h='<div style="margin-bottom:16px"><h4 style="font-size:14px;margin-bottom:6px">Query</h4><p style="font-size:14px;line-height:1.6">'+escapeHtml(l.query)+'</p><p class="text-sm text-muted">Route: <span class="badge '+(l.route_type==='agentic'?'badge-green':'badge-blue')+'">'+l.route_type+'</span> | Results: '+l.result_count+' | Latency: '+(l.duration_ms||'-')+'ms</p></div>';
+        h+='<div style="margin-bottom:16px"><h4 style="font-size:14px;margin-bottom:6px">Retrieved Chunks ('+(l.results||[]).length+')</h4>';
+        if(l.results&&l.results.length)l.results.forEach(function(r,i){var sim=r.similarity||0;h+='<div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="text-sm text-muted"><i class="fas fa-file-alt"></i> '+(r.source||'unknown')+'</span><span style="'+simColor(sim)+'">Similarity: '+sim.toFixed(3)+'</span></div><div style="font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:200px;overflow-y:auto">'+escapeHtml(r.content)+'</div></div>';});
+        else h+='<p class="text-muted">No results</p>';h+='</div>';
+        h+='<div style="margin-bottom:16px"><h4 style="font-size:14px;margin-bottom:6px">LLM-as-Judge</h4>';
+        if(l.judge_score){var js=l.judge_score,sc=function(s){return s>=4?'var(--success)':s>=2?'var(--warning)':'var(--danger)';};h+='<div style="display:flex;gap:16px;margin-bottom:8px">';['relevance','completeness','noise'].forEach(function(d){h+='<div style="text-align:center"><div style="font-size:24px;font-weight:700;color:'+sc(js[d])+'">'+(js[d]||'-')+'</div><div style="font-size:11px;color:var(--muted)">'+d.charAt(0).toUpperCase()+d.slice(1)+'</div></div>';});h+='</div>';if(l.judge_reason)h+='<p class="text-sm text-muted">'+escapeHtml(l.judge_reason)+'</p>';h+='<button class="btn btn-ghost btn-sm" onclick="rejudge('+l.id+')"><i class="fas fa-redo"></i> Re-evaluate</button>';}
+        else{h+='<p class="text-muted">Not evaluated yet</p><button class="btn btn-primary btn-sm" onclick="rejudge('+l.id+')"><i class="fas fa-star"></i> Evaluate Now</button>';}h+='</div>';
+        if(l.feedbacks&&l.feedbacks.length)h+='<div><h4 style="font-size:14px;margin-bottom:6px">User Feedback</h4>'+l.feedbacks.map(function(f){return'<div style="font-size:13px;margin-bottom:2px">'+(f.type==='positive'?'<i class="fas fa-thumbs-up" style="color:var(--success)"></i>':'<i class="fas fa-thumbs-down" style="color:var(--danger)"></i>')+' User #'+f.user_id+' ('+new Date(f.created_at).toLocaleString('zh-CN')+')</div>';}).join('')+'</div>';
+        c.innerHTML=h;document.getElementById('detailPanel').style.display='block';document.getElementById('detailPanel').scrollIntoView({behavior:'smooth'});
+    }catch(err){console.error(err);}
+}
+
+async function rejudge(id){
+    try{
+        var r=await fetch('/api/rag-logs/'+id+'/judge',{method:'POST'});var d=await r.json();
+        if(d.success)showDetail(id);else alert('Evaluation failed: '+(d.message||'Error'));
+    }catch(err){console.error(err);}
+}
+
+document.addEventListener('DOMContentLoaded',function(){loadPage(1);});
+</script>
+{% endblock %}

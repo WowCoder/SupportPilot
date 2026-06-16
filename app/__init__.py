@@ -89,9 +89,10 @@ def create_app(config_class=None) -> Flask:
     from .conversation.routes import conversation_bp
     from .document.routes import document_bp
     from .api.routes import api_bp
-    from .api.chat_memory_routes import chat_memory_bp
-    from .api.ticket_routes import ticket_bp
-    from .api.faq_routes import faq_bp
+    from .api.chat import chat_memory_bp
+    from .api.tickets import ticket_bp
+    from .api.faq import faq_bp
+    from .api.rag_dashboard import rag_dash_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -101,12 +102,14 @@ def create_app(config_class=None) -> Flask:
     app.register_blueprint(chat_memory_bp)
     app.register_blueprint(ticket_bp)
     app.register_blueprint(faq_bp)
+    app.register_blueprint(rag_dash_bp)
 
     # Exempt API blueprint from CSRF protection
     csrf.exempt(api_bp)
     csrf.exempt(chat_memory_bp)
     csrf.exempt(ticket_bp)
     csrf.exempt(faq_bp)
+    csrf.exempt(rag_dash_bp)
 
     # Create database tables
     with app.app_context():

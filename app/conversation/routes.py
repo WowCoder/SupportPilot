@@ -10,8 +10,8 @@ import logging
 from ..extensions import db
 from ..models import Conversation, Message
 from ..utils import sanitize_input
-from rag.rag_utils import rag_utils
-from api.llm_client import llm_client
+from rag.offline.pipeline import rag_utils
+from llm.llm_client import llm_client
 
 logger = logging.getLogger(__name__)
 conversation_bp = Blueprint('conversation', __name__, url_prefix='/conversation')

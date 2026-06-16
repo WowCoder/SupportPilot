@@ -11,7 +11,7 @@ import logging
 
 from ..extensions import db
 from ..models import Document
-from rag.rag_utils import rag_utils
+from rag.offline.pipeline import rag_utils
 
 logger = logging.getLogger(__name__)
 document_bp = Blueprint('document', __name__, url_prefix='/')

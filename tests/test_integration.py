@@ -17,7 +17,7 @@ class TestSimpleQueryRetrieval:
 
     def test_vector_search_basic(self):
         """Test basic vector search functionality"""
-        from rag.tools.vector_tool import vector_search
+        from rag.online.retrievers.dense import vector_search
 
         # Test with mocked ChromaDB
         with patch.object(vector_search, '_get_collection') as mock_collection:
@@ -35,10 +35,10 @@ class TestSimpleQueryRetrieval:
 
     def test_vector_search_small_to_big(self):
         """Test vector search with Small-to-Big mode"""
-        from rag.tools.vector_tool import vector_search
+        from rag.online.retrievers.dense import vector_search
 
         with patch.object(vector_search, '_get_collection') as mock_collection:
-            with patch('rag.tools.vector_tool.parent_store') as mock_store:
+            with patch('rag.online.retrievers.dense.parent_store') as mock_store:
                 mock_collection.return_value.query.return_value = {
                     'documents': [['small chunk']],
                     'distances': [[0.3]],
@@ -58,7 +58,7 @@ class TestSimpleQueryRetrieval:
 
     def test_bm25_search_basic(self):
         """Test basic BM25 search functionality"""
-        from rag.tools.bm25_tool import BM25Tool
+        from rag.online.retrievers.bm25 import BM25Tool
 
         documents = [
             {'content': 'Python programming language', 'metadata': {'source': 'doc1.txt'}},
@@ -76,9 +76,9 @@ class TestSimpleQueryRetrieval:
 
     def test_service_simple_retrieval(self):
         """Test simple retrieval through RAG service"""
-        from rag.service import rag_service
+        from rag.online.service import rag_service
 
-        with patch('rag.service.vector_search') as mock_vector:
+        with patch('rag.online.service.vector_search') as mock_vector:
             mock_vector.execute.return_value = Mock(
                 success=True,
                 data=[{'content': 'test result', 'similarity': 0.8, 'source': 'test.pdf'}]
@@ -99,7 +99,7 @@ class TestComplexQueryAgenticRAG:
 
     def test_router_agentic_classification(self):
         """Test that agentic queries are correctly classified"""
-        from rag.agents.router import query_router
+        from rag.online.router import query_router
 
         agentic_queries = [
             "对比 A 和 B 的异同",
@@ -115,7 +115,7 @@ class TestComplexQueryAgenticRAG:
 
     def test_agent_complex_query_handling(self):
         """Test agent handles complex queries"""
-        from rag.agents.retrieval_agent import retrieval_agent
+        from rag.online.pipeline.builder import retrieval_agent
 
         complex_queries = [
             "对比向量检索和关键词检索的区别",
@@ -131,7 +131,7 @@ class TestComplexQueryAgenticRAG:
 
     def test_agent_state_machine_flow(self):
         """Test agent state machine processes all nodes"""
-        from rag.agents.retrieval_agent import RetrievalAgent
+        from rag.online.pipeline.builder import RetrievalAgent
 
         agent = RetrievalAgent()
 
@@ -140,9 +140,10 @@ class TestComplexQueryAgenticRAG:
 
         expected_nodes = [
             'query_understanding',
-            'planning',
+            'query_decomposition',
+            'tool_selection',
             'tool_execution',
-            'synthesis'
+            'answer_generation'
         ]
 
         for node in expected_nodes:
@@ -150,7 +151,7 @@ class TestComplexQueryAgenticRAG:
 
     def test_multi_tool_planning(self):
         """Test that agent plans to use multiple tools for complex queries"""
-        from rag.agents.nodes.planning import planning_node
+        from rag.online.pipeline.nodes.planning import planning_node
 
         state = {
             'query': '对比分析多个方案的优缺点',
@@ -180,7 +181,7 @@ class TestPerformanceAndLatency:
     def test_tool_execution_latency(self):
         """Test tool execution latency is within acceptable range"""
         import time
-        from rag.tools.vector_tool import vector_search
+        from rag.online.retrievers.dense import vector_search
 
         with patch.object(vector_search, '_get_collection') as mock_collection:
             mock_collection.return_value.query.return_value = {
@@ -200,19 +201,20 @@ class TestPerformanceAndLatency:
     def test_router_latency(self):
         """Test query router latency"""
         import time
-        from rag.agents.router import query_router
+        from rag.online.router import query_router
 
+        # Use a query matching agentic keywords to test rule-based routing (fast path)
         start = time.time()
-        route_type, metadata = query_router.route("test query")
+        route_type, metadata = query_router.route("对比分析多个方案的优缺点")
         elapsed_ms = (time.time() - start) * 1000
 
-        # Router should be very fast (< 10ms)
+        # Rule-based routing should be very fast (< 10ms)
         assert elapsed_ms < 10, f"Router took {elapsed_ms}ms"
 
     def test_agent_initialization_latency(self):
         """Test agent initialization latency"""
         import time
-        from rag.agents.retrieval_agent import RetrievalAgent
+        from rag.online.pipeline.builder import RetrievalAgent
 
         start = time.time()
         agent = RetrievalAgent()
@@ -224,7 +226,7 @@ class TestPerformanceAndLatency:
     def test_concurrent_tool_execution(self):
         """Test concurrent tool execution"""
         import threading
-        from rag.tools.vector_tool import vector_search
+        from rag.online.retrievers.dense import vector_search
 
         results = []
         errors = []
@@ -261,7 +263,7 @@ class TestEndToEndWorkflow:
 
     def test_full_retrieval_workflow(self):
         """Test complete retrieval workflow from query to answer"""
-        from rag.agents.retrieval_agent import retrieval_agent
+        from rag.online.pipeline.builder import retrieval_agent
 
         result = retrieval_agent.run(query="高并发的原则是什么")
 
@@ -271,7 +273,7 @@ class TestEndToEndWorkflow:
 
     def test_error_handling_in_workflow(self):
         """Test error handling throughout workflow"""
-        from rag.agents.retrieval_agent import retrieval_agent
+        from rag.online.pipeline.builder import retrieval_agent
 
         # Empty query should handle gracefully
         result = retrieval_agent.run(query="")
@@ -282,7 +284,7 @@ class TestEndToEndWorkflow:
 
     def test_session_tracking(self):
         """Test session ID tracking through workflow"""
-        from rag.agents.retrieval_agent import retrieval_agent
+        from rag.online.pipeline.builder import retrieval_agent
 
         result = retrieval_agent.run(
             query="test query",

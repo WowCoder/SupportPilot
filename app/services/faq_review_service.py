@@ -11,7 +11,7 @@ from ..extensions import db
 from ..models.faq_entry import FAQEntry, FAQVersion
 from ..models.conversation import Conversation
 from ..models.chat_memory import ChatMemory
-from rag.service import rag_service
+from rag.online.service import rag_service
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ class FAQReviewService:
 
     def _extract_qa_from_conversation(self, conversation_text: str):
         """Extract Q&A from conversation using LLM. Returns (question, answer) tuple."""
-        from api.llm_client import llm_client
+        from llm.llm_client import llm_client
 
         messages = [
             {
@@ -188,7 +188,7 @@ class FAQReviewService:
             return False
 
         # Sync to ChromaDB
-        from rag.faq_vector_sync import sync_faq_to_chroma
+        from rag.utils.faq_vector_sync import sync_faq_to_chroma
         try:
             chroma_doc_ids = sync_faq_to_chroma(faq)
             if not chroma_doc_ids:

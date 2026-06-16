@@ -2,6 +2,10 @@
 
 # SupportPilot startup script
 
+# 激活虚拟环境
+cd "$(dirname "$0")"
+source venv/bin/activate
+
 # Check if .env file exists
 if [ ! -f .env ]; then
     echo "Warning: .env file not found. Copying from .env.example..."
@@ -26,5 +30,5 @@ if [ "$FLASK_ENV" = "production" ]; then
     gunicorn -c gunicorn_config.py wsgi:app
 else
     echo "Starting SupportPilot in development mode..."
-    python3 -m flask --app wsgi:app run --debug
+    python -m flask --app wsgi:app run --debug
 fi

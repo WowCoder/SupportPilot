@@ -60,3 +60,6 @@ chroma_db/
 test_uploads/
 test_knowledge.txt
 .gstack/
+
+# Node
+node_modules/

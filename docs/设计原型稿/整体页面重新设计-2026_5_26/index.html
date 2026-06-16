@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SupportPilot — Design System</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding: 28px 32px 48px; max-width: 1400px; margin: 0 auto; }
+  .gallery-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .gallery-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); transform: translateY(-2px); }
+  .gallery-card .preview {
+    aspect-ratio: 16/10;
+    background: #fafafc;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .gallery-card .preview iframe {
+    width: 200%;
+    height: 200%;
+    border: none;
+    transform: scale(.5);
+    transform-origin: top left;
+    pointer-events: none;
+  }
+  .gallery-card .info { padding: 14px 18px; }
+  .gallery-card .info h3 { font-size: 15px; margin-bottom: 2px; }
+  .gallery-card .info p  { font-size: 13px; color: var(--muted); }
+  .gallery-header { padding: 28px 32px 0; max-width: 1400px; margin: 0 auto; }
+  .gallery-header h1 { font-size: 28px; }
+  .gallery-header p  { color: var(--muted); font-size: 15px; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="topnav">
+  <div class="topnav-left">
+    <a class="topnav-brand" href="index.html"><span class="logo-dot"></span>SupportPilot</a>
+    <div class="topnav-links">
+      <a href="index.html" class="active">Design System</a>
+    </div>
+  </div>
+</div>
+
+<div class="gallery-header">
+  <h1>SupportPilot — Screen Gallery</h1>
+  <p>Apple-style, unified design across all 7 screens. Click any card to open.</p>
+</div>
+
+<div class="gallery">
+  <a class="gallery-card" href="login.html" target="_blank">
+    <div class="preview"><iframe src="login.html" loading="lazy"></iframe></div>
+    <div class="info"><h3>Login</h3><p>Centered auth form, clean and minimal.</p></div>
+  </a>
+  <a class="gallery-card" href="register.html" target="_blank">
+    <div class="preview"><iframe src="register.html" loading="lazy"></iframe></div>
+    <div class="info"><h3>Register</h3><p>Multi-field registration with validation.</p></div>
+  </a>
+  <a class="gallery-card" href="user-dashboard.html" target="_blank">
+    <div class="preview"><iframe src="user-dashboard.html" loading="lazy"></iframe></div>
+    <div class="info"><h3>User Dashboard</h3><p>Stats, recent tickets, quick actions.</p></div>
+  </a>
+  <a class="gallery-card" href="tech-dashboard.html" target="_blank">
+    <div class="preview"><iframe src="tech-dashboard.html" loading="lazy"></iframe></div>
+    <div class="info"><h3>Support Dashboard</h3><p>Agent queue, ticket table, activity feed.</p></div>
+  </a>
+  <a class="gallery-card" href="chat.html" target="_blank">
+    <div class="preview"><iframe src="chat.html" loading="lazy"></iframe></div>
+    <div class="info"><h3>Conversation</h3><p>iMessage-style chat with sidebar.</p></div>
+  </a>
+  <a class="gallery-card" href="upload.html" target="_blank">
+    <div class="preview"><iframe src="upload.html" loading="lazy"></iframe></div>
+    <div class="info"><h3>Document Upload</h3><p>Drag-and-drop with settings panel.</p></div>
+  </a>
+  <a class="gallery-card" href="faq-manage.html" target="_blank">
+    <div class="preview"><iframe src="faq-manage.html" loading="lazy"></iframe></div>
+    <div class="info"><h3>FAQ Management</h3><p>Accordion list with search and bulk actions.</p></div>
+  </a>
+</div>
+
+</body>
+</html>

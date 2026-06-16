@@ -1,294 +1,105 @@
 {% extends "base.html" %}
+{% block title %}Register — SupportPilot{% endblock %}
 
-{% block title %}注册 - SupportPilot{% endblock %}
-
-{% block navbar %}{% endblock %}
-
-{% block content %}
+{% block body %}
 <div class="auth-container">
-    <div class="auth-header">
-        <h1 class="auth-title">
-            <i class="fas fa-headset"></i> SupportPilot
-        </h1>
-        <p class="auth-subtitle">创建您的账户，开始使用智能客服</p>
+  <div class="auth-card">
+    <div class="auth-brand">
+      <span class="logo-dot"></span>
+      <h1>SupportPilot</h1>
+      <p>Create your account</p>
     </div>
 
     <form id="registerForm" method="POST" action="{{ url_for('auth.register') }}" novalidate>
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-        <div class="form-group">
-            <label class="form-label" for="username">
-                <i class="fas fa-user"></i> 用户名
-            </label>
-            <input type="text" id="username" name="username" class="form-input"
-                   placeholder="请输入用户名" required autofocus minlength="3" maxlength="64">
-            <div class="form-error" id="usernameError"></div>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label" for="email">
-                <i class="fas fa-envelope"></i> 邮箱
-            </label>
-            <input type="email" id="email" name="email" class="form-input"
-                   placeholder="请输入邮箱" required>
-            <div class="form-error" id="emailError"></div>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label" for="password">
-                <i class="fas fa-lock"></i> 密码
-            </label>
-            <input type="password" id="password" name="password" class="form-input"
-                   placeholder="请输入密码" required>
-            <div class="form-error" id="passwordError"></div>
-            <p class="form-help">密码至少需要 8 个字符，包含大小写字母和数字</p>
-        </div>
-
-        <div class="flash-messages mb-4" id="flashContainer"></div>
-
-        <button type="submit" class="btn btn-primary btn-block">
-            <i class="fas fa-user-plus"></i> 注册
-        </button>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input id="username" name="username" class="form-input" type="text" placeholder="Choose a username" required autofocus minlength="3" maxlength="64">
+        <div class="form-error" id="usernameError"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input id="email" name="email" class="form-input" type="email" placeholder="name@company.com" required>
+        <div class="form-error" id="emailError"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input id="password" name="password" class="form-input" type="password" placeholder="Min. 8 characters" required minlength="8">
+        <div class="form-error" id="passwordError"></div>
+        <div class="form-hint">Must be at least 8 characters</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px" type="submit">Create Account</button>
     </form>
 
     <div class="auth-footer">
-        <p>已有账户？<a href="{{ url_for('auth.login') }}">立即登录</a></p>
+      Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
     </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-    body {
-        background: linear-gradient(135deg, var(--bg-auth-gradient-start) 0%, var(--bg-auth-gradient-end) 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-    }
-    main {
-        width: 100%;
-        display: flex;
-        justify-content: center;
-    }
-    .auth-container {
-        width: 100%;
-        max-width: 450px;
-        margin: 0;
-        padding: var(--spacing-24);
-        background-color: var(--bg-card);
-        border-radius: var(--radius-large);
-        box-shadow: var(--shadow-card);
-    }
-    .auth-header {
-        text-align: center;
-        margin-bottom: var(--spacing-24);
-    }
-    .auth-title {
-        font-family: var(--font-display);
-        font-size: var(--font-size-section);
-        font-weight: var(--font-weight-semibold);
-        color: var(--sk-text-primary);
-        margin-bottom: var(--spacing-8);
-    }
-    .auth-title i {
-        color: var(--sk-focus-color);
-    }
-    .auth-subtitle {
-        font-family: var(--font-text);
-        font-size: var(--font-size-body);
-        color: var(--sk-text-secondary);
-    }
-    .auth-footer {
-        text-align: center;
-        margin-top: var(--spacing-20);
-        font-size: var(--font-size-micro);
-        color: var(--sk-text-secondary);
-    }
-    .auth-footer a {
-        color: var(--sk-body-link-color);
-        font-weight: var(--font-weight-medium);
-    }
-    .auth-footer a:hover {
-        text-decoration: underline;
-    }
-    .form-error {
-        color: var(--sk-error);
-        font-size: var(--font-size-micro);
-        min-height: 18px;
-        margin-top: var(--spacing-5);
-    }
-    .form-input.error {
-        border-color: var(--sk-error);
-        box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.2);
-    }
-    .flash-messages {
-        margin-bottom: var(--spacing-20);
-    }
-    .flash-messages:empty {
-        display: none;
-    }
-</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 (function() {
-    const form = document.getElementById('registerForm');
-    const usernameInput = document.getElementById('username');
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    const flashContainer = document.getElementById('flashContainer');
+    var form = document.getElementById('registerForm');
+    var usernameInput = document.getElementById('username');
+    var emailInput = document.getElementById('email');
+    var passwordInput = document.getElementById('password');
 
-    // Show error message for a field
     function showError(input, errorId, message) {
-        const errorEl = document.getElementById(errorId);
-        if (errorEl) {
-            errorEl.textContent = message;
-            errorEl.classList.add('visible');
-        }
+        var el = document.getElementById(errorId);
+        if (el) el.textContent = message;
         input.classList.add('error');
     }
-
-    // Clear error for a field
     function clearError(input, errorId) {
-        const errorEl = document.getElementById(errorId);
-        if (errorEl) {
-            errorEl.textContent = '';
-            errorEl.classList.remove('visible');
-        }
+        var el = document.getElementById(errorId);
+        if (el) el.textContent = '';
         input.classList.remove('error');
     }
+    function validatePassword(pw) {
+        if (pw.length < 8) return {valid:false, message:'Password must be at least 8 characters'};
+        if (!/[A-Z]/.test(pw) || !/[a-z]/.test(pw) || !/[0-9]/.test(pw))
+            return {valid:false, message:'Password must contain upper, lower letters and digits'};
+        return {valid:true, message:''};
+    }
+    function validateEmail(em) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em); }
 
-    // Clear all errors
-    function clearAllErrors() {
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
         clearError(usernameInput, 'usernameError');
         clearError(emailInput, 'emailError');
         clearError(passwordInput, 'passwordError');
-        flashContainer.innerHTML = '';
-        flashContainer.classList.remove('has-errors');
-    }
+        var hasError = false;
 
-    // Show flash error
-    function showFlashError(message) {
-        flashContainer.innerHTML = `
-            <div class="flash-message danger">
-                <i class="fas fa-exclamation-circle"></i>
-                <div>${escapeHtml(message)}</div>
-            </div>
-        `;
-        flashContainer.classList.add('has-errors');
-    }
+        var uname = usernameInput.value.trim();
+        if (uname.length < 3 || uname.length > 64) { showError(usernameInput, 'usernameError', 'Username must be 3-64 characters'); hasError = true; }
+        var email = emailInput.value.trim();
+        if (!email) { showError(emailInput, 'emailError', 'Email is required'); hasError = true; }
+        else if (!validateEmail(email)) { showError(emailInput, 'emailError', 'Invalid email format'); hasError = true; }
+        var pw = passwordInput.value;
+        if (!pw) { showError(passwordInput, 'passwordError', 'Password is required'); hasError = true; }
+        else { var vr = validatePassword(pw); if (!vr.valid) { showError(passwordInput, 'passwordError', vr.message); hasError = true; } }
+        if (hasError) return;
 
-    // Escape HTML to prevent XSS
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text || '';
-        return div.innerHTML;
-    }
-
-    // Validate password strength
-    function validatePassword(password) {
-        if (password.length < 8) {
-            return { valid: false, message: '密码长度至少需要 8 个字符' };
-        }
-
-        const hasUppercase = /[A-Z]/.test(password);
-        const hasLowercase = /[a-z]/.test(password);
-        const hasDigit = /[0-9]/.test(password);
-
-        if (!hasUppercase || !hasLowercase || !hasDigit) {
-            return { valid: false, message: '密码必须包含大小写字母和数字' };
-        }
-
-        return { valid: true, message: '' };
-    }
-
-    // Validate email format
-    function validateEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    // Form submission
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        clearAllErrors();
-
-        let hasError = false;
-
-        // Validate username
-        const username = usernameInput.value.trim();
-        if (username.length < 3 || username.length > 64) {
-            showError(usernameInput, 'usernameError', '用户名长度必须在 3-64 个字符之间');
-            hasError = true;
-        }
-
-        // Validate email
-        const email = emailInput.value.trim();
-        if (!email) {
-            showError(emailInput, 'emailError', '请输入邮箱地址');
-            hasError = true;
-        } else if (!validateEmail(email)) {
-            showError(emailInput, 'emailError', '请输入有效的邮箱地址');
-            hasError = true;
-        }
-
-        // Validate password
-        const password = passwordInput.value;
-        if (!password) {
-            showError(passwordInput, 'passwordError', '请输入密码');
-            hasError = true;
-        } else {
-            const pwdResult = validatePassword(password);
-            if (!pwdResult.valid) {
-                showError(passwordInput, 'passwordError', pwdResult.message);
-                hasError = true;
-            }
-        }
-
-        if (hasError) {
-            return;
-        }
-
-        // Submit via AJAX
+        var btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerHTML = 'Registering...';
         try {
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 注册中...';
-
-            const formData = new FormData(form);
-            const resp = await fetch(form.action, {
+            var fd = new FormData(form);
+            var resp = await fetch(form.action, {
                 method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: new URLSearchParams(formData).toString()
+                headers: {'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'},
+                body: new URLSearchParams(fd).toString()
             });
-
-            const data = await resp.json();
-
-            if (data.success) {
-                // Redirect to login on success
-                window.location.href = data.redirect || '/login';
-            } else {
-                showFlashError(data.message || '注册失败，请稍后重试');
-            }
-        } catch (err) {
-            console.error('Registration error:', err);
-            showFlashError('网络错误，请稍后重试');
-        } finally {
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> 注册';
-        }
+            var data = await resp.json();
+            if (data.success) window.location.href = data.redirect || '/login';
+            else alert(data.message || 'Registration failed');
+        } catch (err) { console.error(err); alert('Network error'); }
+        finally { btn.disabled = false; btn.innerHTML = 'Create Account'; }
     });
-
-    // Clear error on input
-    usernameInput.addEventListener('input', () => clearError(usernameInput, 'usernameError'));
-    emailInput.addEventListener('input', () => clearError(emailInput, 'emailError'));
-    passwordInput.addEventListener('input', () => clearError(passwordInput, 'passwordError'));
+    usernameInput.addEventListener('input', function(){clearError(usernameInput,'usernameError');});
+    emailInput.addEventListener('input', function(){clearError(emailInput,'emailError');});
+    passwordInput.addEventListener('input', function(){clearError(passwordInput,'passwordError');});
 })();
 </script>
 {% endblock %}
