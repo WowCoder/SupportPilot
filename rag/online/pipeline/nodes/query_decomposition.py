@@ -6,7 +6,7 @@ into independent sub-queries for parallel retrieval.
 """
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from rag.online.pipeline.state import AgentStateDict
 from rag.utils.config import get_config
@@ -68,12 +68,18 @@ class QueryDecompositionNode:
         try:
             from llm.llm_client import llm_client
 
+            logger.info(
+                '🧩 [Query Decomposition] Analyzing query complexity via LLM: '
+                '"%s"', query[:80],
+            )
+
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ]
             response = llm_client.generate(messages, temperature=0.2, max_tokens=512)
             if not response:
+                logger.warning('[Query Decomposition] LLM returned empty response')
                 return [{'query': query, 'type': 'factual'}]
 
             # Extract JSON from response
@@ -85,6 +91,7 @@ class QueryDecompositionNode:
 
             is_compound = result.get('is_compound', False)
             sub_queries = result.get('sub_queries', [{'query': query, 'type': 'factual'}])
+            reasoning = result.get('reasoning', '')
 
             if not sub_queries:
                 sub_queries = [{'query': query, 'type': 'factual'}]
@@ -94,15 +101,25 @@ class QueryDecompositionNode:
                 sub_queries = sub_queries[:self.max_sub_queries]
 
             if is_compound and len(sub_queries) > 1:
-                logger.info(f'Query decomposed into {len(sub_queries)} sub-queries: '
-                           f'{[sq["query"][:40] for sq in sub_queries]}')
+                logger.info(
+                    '✅ [Query Decomposition] Compound query → %d sub-queries: %s '
+                    '(reason: %s)',
+                    len(sub_queries),
+                    [sq['query'][:40] for sq in sub_queries],
+                    reasoning[:100] if reasoning else 'N/A',
+                )
             else:
-                logger.debug(f'Query kept as single: "{query[:50]}..."')
+                logger.info(
+                    '[Query Decomposition] Simple query, no decomposition needed: '
+                    '"%s" (reason: %s)',
+                    query[:50],
+                    reasoning[:100] if reasoning else 'N/A',
+                )
 
             return sub_queries
 
         except json.JSONDecodeError:
-            logger.warning(f'Failed to parse decomposition JSON, treating as simple query')
+            logger.warning('Failed to parse decomposition JSON, treating as simple query')
             return [{'query': query, 'type': 'factual'}]
         except Exception as e:
             logger.warning(f'Query decomposition failed: {e}')

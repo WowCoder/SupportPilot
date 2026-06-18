@@ -70,13 +70,26 @@ class SynthesisNode:
         try:
             from llm.llm_client import llm_client
 
+            context_len = len(context)
+            logger.info(
+                '💬 [Synthesis] Generating answer via LLM '
+                '(query="%s", context=%d chars, %d sources)',
+                query[:60], context_len, len(results),
+            )
+
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ]
             answer = llm_client.generate(messages, temperature=0.3, max_tokens=1024)
             if answer:
-                return answer.strip()
+                answer_clean = answer.strip()
+                logger.info(
+                    '✅ [Synthesis] Answer generated: %d chars (preview: "%s")',
+                    len(answer_clean), answer_clean[:80],
+                )
+                return answer_clean
+            logger.warning('[Synthesis] LLM returned empty response')
             return None
 
         except Exception as e:

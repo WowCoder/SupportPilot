@@ -102,10 +102,25 @@ class QueryUnderstandingNode:
         try:
             from llm.llm_client import llm_client
 
+            logger.info(
+                '🔍 [Query Understanding] Resolving references via LLM '
+                '(history=%d msgs, query="%s")',
+                len(history), query[:60],
+            )
+
             messages = [{"role": "user", "content": prompt}]
             resolved = llm_client.generate(messages, temperature=0.2, max_tokens=128)
             if resolved and resolved.strip() != query:
-                return resolved.strip().strip('"\'').strip()
+                clean = resolved.strip().strip('"\'').strip()
+                logger.info(
+                    '✅ [Query Understanding] Reference resolved: '
+                    '"%s" → "%s"', query[:50], clean[:50],
+                )
+                return clean
+            logger.debug(
+                '[Query Understanding] LLM kept query unchanged: "%s"',
+                query[:50],
+            )
         except Exception as e:
             logger.warning(f'Reference resolution failed: {e}')
 

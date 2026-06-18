@@ -65,6 +65,12 @@ class FaithfulnessCheckNode:
         try:
             from llm.llm_client import llm_client
 
+            logger.info(
+                '🛡️ [Faithfulness] Checking answer faithfulness via LLM '
+                '(answer=%d chars, %d source docs)',
+                len(answer), len(documents[:5]),
+            )
+
             messages = [{"role": "user", "content": prompt}]
             response = llm_client.generate(messages, temperature=0, max_tokens=512)
 
@@ -74,7 +80,19 @@ class FaithfulnessCheckNode:
                 if response.startswith('```'):
                     lines = response.split('\n')
                     response = '\n'.join(lines[1:-1])
-                return json.loads(response)
+                result = json.loads(response)
+
+                faithful = result.get('faithful_count', 0)
+                total = result.get('total_claims', 0)
+                hallucinations = result.get('hallucinations', [])
+                logger.info(
+                    '🛡️ [Faithfulness] Result: %d/%d claims faithful '
+                    '(score=%.2f) hallucinations=%s',
+                    faithful, total,
+                    faithful / max(total, 1),
+                    hallucinations if hallucinations else 'none',
+                )
+                return result
         except Exception as e:
             logger.warning(f'Faithfulness check failed: {e}')
 

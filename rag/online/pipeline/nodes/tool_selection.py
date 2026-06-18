@@ -88,6 +88,11 @@ class ToolSelectionNode:
         try:
             from llm.llm_client import llm_client
 
+            logger.info(
+                '🔧 [Tool Selection] Selecting retrieval tools via LLM: '
+                '"%s"', query[:60],
+            )
+
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -102,17 +107,24 @@ class ToolSelectionNode:
                 result = json.loads(response)
 
                 tools = result.get('tools', ['vector_search'])
+                reasoning = result.get('reasoning', '')
 
                 # Auto-add ensemble for multi-tool fusion
                 if len(tools) > 1 and 'ensemble_retrieval' not in tools:
                     tools.append('ensemble_retrieval')
 
-                logger.debug(f'LLM selected tools for "{query[:40]}...": {tools}')
+                logger.info(
+                    '✅ [Tool Selection] Selected: %s | type=%s k=%s | reason: %s',
+                    tools,
+                    result.get('query_type', 'factual'),
+                    result.get('params', {}).get('k', 5),
+                    reasoning[:120] if reasoning else 'N/A',
+                )
                 return {
                     'tools': tools,
                     'params': result.get('params', {'k': 5, 'similarity_threshold': 0.25}),
                     'query_type': result.get('query_type', 'factual'),
-                    'reasoning': result.get('reasoning', '')
+                    'reasoning': reasoning,
                 }
 
         except Exception as e:

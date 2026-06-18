@@ -84,6 +84,11 @@ class RelevanceCheckNode:
         try:
             from llm.llm_client import llm_client
 
+            logger.info(
+                '🎯 [Relevance Check] Evaluating result relevance via LLM '
+                '(top1_sim < 0.6): query="%s"', query[:60],
+            )
+
             messages = [{"role": "user", "content": prompt}]
             response = llm_client.generate(messages, temperature=0, max_tokens=16)
             if response:
@@ -91,7 +96,12 @@ class RelevanceCheckNode:
                 import re
                 match = re.search(r'(\d+\.?\d*)', response.strip())
                 if match:
-                    return min(1.0, max(0.0, float(match.group(1))))
+                    llm_score = min(1.0, max(0.0, float(match.group(1))))
+                    logger.info(
+                        '🎯 [Relevance Check] LLM judgment: %.2f (raw: "%s")',
+                        llm_score, response.strip()[:40],
+                    )
+                    return llm_score
         except Exception as e:
             logger.warning(f'LLM relevance check failed: {e}')
 

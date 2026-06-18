@@ -92,9 +92,6 @@ def _save_sub_query_results(state: AgentStateDict) -> None:
     Tags each result with its sub_query metadata for downstream aggregation.
     """
     current_results = list(state.get('retrieval_results', []))
-    if not current_results:
-        return
-
     all_sub_results = list(state.get('all_sub_results', []))
     sub_idx = state.get('current_sub_query_idx', 0)
     sub_queries = list(state.get('sub_queries', []))
@@ -110,9 +107,12 @@ def _save_sub_query_results(state: AgentStateDict) -> None:
     all_sub_results.extend(current_results)
     state['all_sub_results'] = all_sub_results
 
-    logger.debug(
-        f'Saved {len(current_results)} results from sub_query[{sub_idx}] '
-        f'-> all_sub_results total: {len(all_sub_results)}'
+    logger.info(
+        '💾 [Sub-Query Loop] Saved %d results from sub_query[%d/%d] '
+        '("…%s") → all_sub_results total: %d',
+        len(current_results), sub_idx + 1, len(sub_queries),
+        sub_query_text[:40] if sub_query_text else '?',
+        len(all_sub_results),
     )
 
 

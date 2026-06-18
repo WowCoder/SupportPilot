@@ -85,6 +85,12 @@ class QueryRefinerNode:
         try:
             from llm.llm_client import llm_client
 
+            logger.info(
+                '🔄 [Query Refiner] Refining query via LLM '
+                '(retry=%d strategy=%s score=%.2f): "%s"',
+                retry_count, strategy, relevance_score, current_query[:60],
+            )
+
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -94,8 +100,15 @@ class QueryRefinerNode:
                 refined = refined.strip().strip('"\'').strip()
                 # Don't reuse previous queries
                 if refined in query_history:
-                    logger.warning('Refined query duplicates history, skipping')
+                    logger.warning(
+                        '🔄 [Query Refiner] Refined query duplicates history, '
+                        'skipping: "%s"', refined[:60],
+                    )
                     return None
+                logger.info(
+                    '✅ [Query Refiner] Refined: "%s" → "%s" (strategy=%s)',
+                    current_query[:50], refined[:50], strategy,
+                )
                 return refined
         except Exception as e:
             logger.warning(f'Query refinement failed: {e}')

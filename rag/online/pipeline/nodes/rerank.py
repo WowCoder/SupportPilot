@@ -75,6 +75,11 @@ class RerankNode:
         # Truncate to top_k candidates to keep inference fast
         candidates = results[:top_k]
 
+        logger.info(
+            '📊 [Rerank] Running Cross-Encoder on %d candidates (query="%s")',
+            len(candidates), query[:60],
+        )
+
         if len(candidates) <= 1:
             # Single result: no reranking needed
             state['reranked_results'] = candidates
@@ -108,9 +113,13 @@ class RerankNode:
             reranked = candidates[:final_k]
 
             top_score = reranked[0].get('rerank_score', 0) if reranked else 0
-            logger.debug(
-                'Rerank: %d→%d→%d results (top rerank score: %.3f)',
-                len(results), len(candidates), len(reranked), top_score,
+            orig_top_score = results[0].get('similarity', results[0].get('score', 0)) if results else 0
+            logger.info(
+                '📊 [Rerank] Cross-Encoder reranked: %d→%d→%d results '
+                '(top score: %.3f→%.3f, +%.0f%%)',
+                len(results), len(candidates), len(reranked),
+                orig_top_score, top_score,
+                ((top_score - orig_top_score) / max(orig_top_score, 0.01)) * 100,
             )
 
             # Replace retrieval_results with reranked results
