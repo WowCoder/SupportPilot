@@ -6,9 +6,25 @@ agent:
   max_iterations: 3
   timeout_seconds: 30
   temperature: 0.3
-  max_retries: 2               # Max self-correction retries per query
-  relevance_threshold: 0.3     # Min relevance score to skip re-query
-  faithfulness_threshold: 0.8  # Min faithfulness ratio to accept answer
+  max_retries: 2               # Max self-correction retries per sub-query
+  relevance_threshold: 0.4     # Min relevance score to skip re-query (raised from 0.3)
+  faithfulness_threshold: 0.7  # Min faithfulness ratio to accept answer (lowered from 0.8)
+  global_max_retries: 1        # Max global re-retrieval triggered by faithfulness failure
+
+# Rerank configuration (Cross-Encoder)
+rerank:
+  enabled: true
+  model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+  top_k: 10                    # Number of candidates to feed into reranker
+  final_k: 5                   # Number of results to keep after reranking
+
+# Relevance check fine-tuning
+relevance:
+  threshold: 0.4               # Min composite score to pass
+  top_n_avg: 3                 # Use average of top-N similarity scores
+  sim_weight: 0.6              # Weight for similarity in composite score
+  llm_weight: 0.4              # Weight for LLM judgment in composite score
+  min_results_for_pass: 2      # Minimum result count; fewer = score penalty
 
 # Query router configuration
 router:

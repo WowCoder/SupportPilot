@@ -41,7 +41,7 @@ Features:
 """
 import logging
 import signal
-from typing import Any, Dict, List, Optional, Literal
+from typing import Any, Dict, Optional, Literal
 from contextlib import contextmanager
 
 from langgraph.graph import StateGraph, END
@@ -55,6 +55,7 @@ from rag.online.pipeline.nodes.query_refiner import query_refiner_node
 from rag.online.pipeline.nodes.result_aggregation import result_aggregation_node
 from rag.online.pipeline.nodes.synthesis import synthesis_node
 from rag.online.pipeline.nodes.faithfulness_check import faithfulness_check_node
+from rag.online.pipeline.nodes.rerank import rerank_node
 from rag.utils.config import get_config
 
 logger = logging.getLogger(__name__)
@@ -83,89 +84,158 @@ def timeout_handler(seconds: int):
 
 # ---- Conditional Edge Functions ----
 
-def route_after_decomposition(state: AgentStateDict) -> Literal['tool_selection', 'sub_query_loop']:
+
+def _save_sub_query_results(state: AgentStateDict) -> None:
     """
-    After decomposition, decide whether to enter sub-query loop.
+    Save current sub-query's retrieval results into all_sub_results.
 
-    sub_queries length == 1: go directly to tool_selection
-    sub_queries length > 1: enter sub_query_loop (process each via tool_selection)
+    Tags each result with its sub_query metadata for downstream aggregation.
     """
-    sub_queries = state.get('sub_queries', [])
-    if len(sub_queries) <= 1:
-        return 'tool_selection'
-    return 'tool_selection'  # Both go to tool_selection; sub-query loop managed by state
+    current_results = list(state.get('retrieval_results', []))
+    if not current_results:
+        return
+
+    all_sub_results = list(state.get('all_sub_results', []))
+    sub_idx = state.get('current_sub_query_idx', 0)
+    sub_queries = list(state.get('sub_queries', []))
+
+    sub_query_text = ''
+    if sub_idx < len(sub_queries):
+        sub_query_text = sub_queries[sub_idx].get('query', '')
+
+    for r in current_results:
+        r['sub_query_idx'] = sub_idx
+        r['sub_query'] = sub_query_text
+
+    all_sub_results.extend(current_results)
+    state['all_sub_results'] = all_sub_results
+
+    logger.debug(
+        f'Saved {len(current_results)} results from sub_query[{sub_idx}] '
+        f'-> all_sub_results total: {len(all_sub_results)}'
+    )
 
 
-def route_after_tool_execution(state: AgentStateDict) -> Literal['relevance_check']:
-    """After tool execution, always go to relevance check."""
-    return 'relevance_check'
-
-
-def route_after_relevance(state: AgentStateDict) -> Literal['result_aggregation', 'query_refiner']:
+def _move_to_next_sub_query(state: AgentStateDict) -> bool:
     """
-    After relevance check, decide next step.
+    Advance to the next sub-query if available.
 
-    - If score >= threshold: proceed to result_aggregation
-    - If score < threshold and retries remaining: go to query_refiner
-    - If score < threshold and max retries: go to result_aggregation (degraded)
+    Returns True if there is a next sub-query, False if all done.
+    """
+    sub_queries = list(state.get('sub_queries', []))
+    current_idx = state.get('current_sub_query_idx', 0)
+
+    if current_idx + 1 < len(sub_queries):
+        state['current_sub_query_idx'] = current_idx + 1
+        state['retry_count'] = 0
+        state['retrieval_results'] = []
+        state['reranked_results'] = []
+        logger.info(f'Moving to sub_query[{current_idx + 1}/{len(sub_queries)}]')
+        return True
+    return False
+
+
+def route_after_relevance(
+    state: AgentStateDict,
+) -> Literal['tool_selection', 'result_aggregation', 'query_refiner']:
+    """
+    After relevance check, manage sub-query loop and retries.
+
+    - PASS + more sub_queries  → tool_selection (next sub-query)
+    - PASS + all done          → result_aggregation
+    - FAIL + retries remaining → query_refiner (retry SAME sub-query)
+    - FAIL + max retries       → accumulate best-effort, continue to next or aggregate
     """
     retry_count = state.get('retry_count', 0)
     max_retries = state.get('max_retries', 2)
     relevance_scores = state.get('relevance_scores', {})
-
     current_score = relevance_scores.get(str(retry_count), 0.0)
-    threshold = get_config().get('agent.relevance_threshold', 0.3)
+    threshold = get_config().get('agent.relevance_threshold', 0.4)
 
     if current_score >= threshold:
-        logger.info(f'Relevance PASS (score={current_score:.3f} >= {threshold}), proceeding to aggregation')
-        return 'result_aggregation'
+        # ✅ PASS: save results, move to next sub-query or aggregate
+        logger.info(
+            f'Relevance PASS (score={current_score:.3f} >= {threshold})'
+        )
+        _save_sub_query_results(state)
 
+        if _move_to_next_sub_query(state):
+            return 'tool_selection'
+        else:
+            logger.info('All sub-queries processed, proceeding to aggregation')
+            return 'result_aggregation'
+
+    # ❌ FAIL
     if retry_count < max_retries:
-        logger.info(f'Relevance FAIL (score={current_score:.3f} < {threshold}), '
-                   f'retrying ({retry_count + 1}/{max_retries})')
+        logger.info(
+            f'Relevance FAIL (score={current_score:.3f} < {threshold}), '
+            f'retrying sub_query[{state.get("current_sub_query_idx", 0)}] '
+            f'({retry_count + 1}/{max_retries})'
+        )
         return 'query_refiner'
 
-    logger.warning(f'Relevance FAIL after {max_retries} retries, falling back to best-effort aggregation')
-    return 'result_aggregation'
+    # Max retries exhausted: save best-effort results and move on
+    logger.warning(
+        f'Relevance FAIL after {max_retries} retries for '
+        f'sub_query[{state.get("current_sub_query_idx", 0)}], '
+        f'continuing with best-effort results'
+    )
+    _save_sub_query_results(state)
+
+    if _move_to_next_sub_query(state):
+        return 'tool_selection'
+    else:
+        return 'result_aggregation'
 
 
 def route_after_refine(state: AgentStateDict) -> Literal['tool_selection']:
-    """After query refinement, go back to tool selection."""
-    # Check if there are more sub-queries to process
-    sub_queries = state.get('sub_queries', [])
-    current_idx = state.get('current_sub_query_idx', 0)
-    retry_count = state.get('retry_count', 0)
-    max_retries = state.get('max_retries', 2)
+    """
+    After query refinement, loop back to tool selection.
 
-    # If we still have sub-queries to process and haven't exhausted retries
-    if current_idx < len(sub_queries) - 1 and retry_count <= max_retries:
-        state['current_sub_query_idx'] = current_idx + 1
-
+    NOTE: sub_query_idx is NOT incremented here — we're retrying the
+    SAME sub-query with a refined query. The sub-query loop advances
+    only on relevance PASS in route_after_relevance.
+    """
     return 'tool_selection'
 
 
-def route_after_faithfulness(state: AgentStateDict) -> Literal['__end__', 'query_refiner']:
+def route_after_faithfulness(
+    state: AgentStateDict,
+) -> Literal['__end__', 'query_refiner']:
     """
-    After faithfulness check, decide whether to end or re-retrieve.
+    After faithfulness check, decide whether to end or trigger global re-retrieval.
 
-    - If score >= threshold: END
-    - If score < threshold and retries remaining: re-retrieve
-    - If score < threshold and no retries: END anyway (best effort)
+    - score >= threshold → END
+    - score < threshold + global retries remaining → reset and re-retrieve all sub-queries
+    - score < threshold + no global retries → END (best effort)
     """
     score = state.get('faithfulness_score', 1.0)
-    threshold = get_config().get('agent.faithfulness_threshold', 0.8)
-    retry_count = state.get('retry_count', 0)
-    max_retries = state.get('max_retries', 2)
+    threshold = get_config().get('agent.faithfulness_threshold', 0.7)
+    global_retry = state.get('global_retry_count', 0)
+    max_global = state.get('max_global_retries', 1)
 
     if score >= threshold:
-        logger.info(f'Faithfulness PASS (score={score:.2f}), ending')
+        logger.info(f'Faithfulness PASS (score={score:.2f} >= {threshold}), ending')
         return '__end__'
 
-    if retry_count < max_retries:
-        logger.warning(f'Faithfulness FAIL (score={score:.2f} < {threshold}), re-retrieving')
+    if global_retry < max_global:
+        logger.warning(
+            f'Faithfulness FAIL (score={score:.2f} < {threshold}), '
+            f'triggering global re-retrieval ({global_retry + 1}/{max_global})'
+        )
+        # Reset sub-query state for full re-retrieval
+        state['global_retry_count'] = global_retry + 1
+        state['current_sub_query_idx'] = 0
+        state['retry_count'] = 0
+        state['all_sub_results'] = []
+        state['retrieval_results'] = []
+        state['reranked_results'] = []
         return 'query_refiner'
 
-    logger.warning(f'Faithfulness FAIL with no retries remaining, ending with best effort')
+    logger.warning(
+        f'Faithfulness FAIL with no global retries remaining, '
+        f'ending with best effort (score={score:.2f})'
+    )
     return '__end__'
 
 
@@ -205,6 +275,7 @@ class RetrievalAgent:
         builder.add_node('query_decomposition', self._run_query_decomposition)
         builder.add_node('tool_selection', self._run_tool_selection)
         builder.add_node('tool_execution', self._run_tool_execution)
+        builder.add_node('rerank', self._run_rerank)
         builder.add_node('relevance_check', self._run_relevance_check)
         builder.add_node('query_refiner', self._run_query_refiner)
         builder.add_node('result_aggregation', self._run_result_aggregation)
@@ -214,30 +285,34 @@ class RetrievalAgent:
         # Entry point
         builder.set_entry_point('query_understanding')
 
-        # Fixed edges
+        # Fixed edges: understanding → decomposition → tool_selection
         builder.add_edge('query_understanding', 'query_decomposition')
         builder.add_edge('query_decomposition', 'tool_selection')
-        builder.add_edge('tool_selection', 'tool_execution')
-        builder.add_edge('tool_execution', 'relevance_check')
 
-        # Conditional edges: the self-correction loop
+        # Tool pipeline: selection → execution → rerank → relevance_check
+        builder.add_edge('tool_selection', 'tool_execution')
+        builder.add_edge('tool_execution', 'rerank')
+        builder.add_edge('rerank', 'relevance_check')
+
+        # Conditional edges: relevance_check drives the sub-query loop
         builder.add_conditional_edges(
             'relevance_check',
             route_after_relevance,
             {
+                'tool_selection': 'tool_selection',
                 'result_aggregation': 'result_aggregation',
                 'query_refiner': 'query_refiner',
             }
         )
 
-        # After refinement, loop back to tool selection
+        # After refinement, loop back to tool selection (same sub-query)
         builder.add_edge('query_refiner', 'tool_selection')
 
-        # Aggregation -> answer generation -> faithfulness check
+        # Aggregation → answer generation → faithfulness check
         builder.add_edge('result_aggregation', 'answer_generation')
         builder.add_edge('answer_generation', 'faithfulness_check')
 
-        # Faithfulness: either end or re-retrieve
+        # Faithfulness: either end or trigger global re-retrieval
         builder.add_conditional_edges(
             'faithfulness_check',
             route_after_faithfulness,
@@ -277,6 +352,9 @@ class RetrievalAgent:
 
     def _run_faithfulness_check(self, state: AgentStateDict) -> AgentStateDict:
         return faithfulness_check_node.process(state)
+
+    def _run_rerank(self, state: AgentStateDict) -> AgentStateDict:
+        return rerank_node.process(state)
 
     # ---- Public API ----
 
@@ -321,6 +399,13 @@ class RetrievalAgent:
             'faithfulness_score': 0.0,
             'hallucination_flags': [],
 
+            # Global retry (faithfulness failure triggers full re-retrieval)
+            'global_retry_count': 0,
+            'max_global_retries': self.config.get('agent.global_max_retries', 1),
+
+            # Rerank
+            'reranked_results': [],
+
             # Metadata
             'metadata': {'session_id': session_id}
         }
@@ -341,7 +426,7 @@ class RetrievalAgent:
             faithfulness = final_state.get('faithfulness_score', 0.0)
 
             logger.info(f'Agent complete: answer={bool(answer)} results={len(results)} '
-                       f'retries={retry_count} relevance={relevance_scores} faithfulness={faithfulness:.2f}')
+                        f'retries={retry_count} relevance={relevance_scores} faithfulness={faithfulness:.2f}')
 
             return {
                 'success': True,

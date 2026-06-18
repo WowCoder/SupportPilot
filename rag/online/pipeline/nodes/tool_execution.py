@@ -4,7 +4,7 @@ Tool Execution Node for Agentic RAG system.
 Executes retrieval tools based on the planning phase.
 """
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from rag.online.pipeline.state import AgentStateDict, ToolCall
 from rag.utils.config import get_config
@@ -98,7 +98,12 @@ class ToolExecutionNode:
             logger.warning('No steps in plan, skipping tool execution')
             return state
 
-        logger.info(f'Executing {len(steps)} tool steps')
+        sub_idx = state.get('current_sub_query_idx', 0)
+        retry = state.get('retry_count', 0)
+        logger.info(
+            f'Executing {len(steps)} tool steps for sub_query[{sub_idx}] '
+            f'(retry={retry})'
+        )
 
         tool_results = []
         parallel_results = {}

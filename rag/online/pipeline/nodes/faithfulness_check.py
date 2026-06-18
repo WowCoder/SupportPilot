@@ -6,7 +6,7 @@ Detects hallucinations where the LLM invents information not present in
 the source documents.
 """
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from rag.online.pipeline.state import AgentStateDict
 from rag.utils.config import get_config
@@ -24,7 +24,7 @@ class FaithfulnessCheckNode:
 
     def __init__(self):
         self.config = get_config()
-        self.threshold = self.config.get('agent.faithfulness_threshold', 0.8)
+        self.threshold = self.config.get('agent.faithfulness_threshold', 0.7)
 
     def _check_with_llm(self, query: str, answer: str,
                         documents: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -107,10 +107,10 @@ class FaithfulnessCheckNode:
 
         if score < self.threshold:
             logger.warning(f'Faithfulness check FAILED: score={score:.2f} '
-                          f'({faithful_count}/{total_claims}) hallucinations: {hallucinations}')
+                           f'({faithful_count}/{total_claims}) hallucinations: {hallucinations}')
         else:
             logger.info(f'Faithfulness check passed: score={score:.2f} '
-                       f'({faithful_count}/{total_claims})')
+                        f'({faithful_count}/{total_claims})')
 
         return state
 

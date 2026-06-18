@@ -5,7 +5,7 @@ Merges retrieval results from multiple sub-queries or correction attempts
 using RRF-based deduplication and ranking.
 """
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from rag.online.pipeline.state import AgentStateDict
 from rag.utils.config import get_config
@@ -30,8 +30,8 @@ class ResultAggregationNode:
         self.top_k = self.config.get('tools.ensemble.k', 10)
 
     def _content_key(self, content: str) -> str:
-        """Generate a normalized key for deduplication."""
-        return content.strip()[:100]
+        """Generate a normalized key for deduplication (first 200 chars)."""
+        return content.strip()[:200]
 
     def _rrf_merge(self, all_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -105,8 +105,8 @@ class ResultAggregationNode:
         merged = self._rrf_merge(combined)
 
         logger.info(f'Aggregation: {len(combined)} results from '
-                   f'{len(all_sub_results) > 0 and "sub-queries" or "single query"} '
-                   f'-> {len(merged)} after dedup')
+                    f'{len(all_sub_results) > 0 and "sub-queries" or "single query"} '
+                    f'-> {len(merged)} after dedup')
 
         state['retrieval_results'] = merged
         state['all_sub_results'] = merged  # Sync

@@ -7,7 +7,7 @@ Evaluates retrieval result quality and decides whether to:
 - Fall back to best-effort aggregation (fail, max retries exceeded)
 """
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from rag.online.pipeline.state import AgentStateDict
 from rag.utils.config import get_config
@@ -19,22 +19,41 @@ class RelevanceCheckNode:
     """
     Checks relevance of retrieval results and routes accordingly.
 
-    Uses two signals:
-    1. Top-1 similarity score (from vector search)
-    2. LLM quick relevance judgment (does content cover the question?)
+    Uses three signals:
+    1. Average of top-3 similarity scores (more robust than top-1)
+    2. Result count penalty (too few results = lower confidence)
+    3. LLM quick relevance judgment for borderline cases
     """
 
     def __init__(self):
         self.config = get_config()
-        self.threshold = self.config.get('agent.relevance_threshold', 0.3)
+        self.threshold = self.config.get('agent.relevance_threshold', 0.4)
         self.max_retries = self.config.get('agent.max_retries', 2)
+        self.top_n_avg = self.config.get('relevance.top_n_avg', 3)
+        self.min_results = self.config.get('relevance.min_results_for_pass', 2)
+        self.sim_weight = self.config.get('relevance.sim_weight', 0.6)
+        self.llm_weight = self.config.get('relevance.llm_weight', 0.4)
 
-    def _top1_similarity(self, results: List[Dict[str, Any]]) -> float:
-        """Get the highest similarity score from results."""
+    def _top_n_avg_similarity(self, results: List[Dict[str, Any]], n: int = 3) -> float:
+        """
+        Get the average of top-N similarity scores.
+
+        More robust than top-1: a single lucky high-score result won't
+        mask that the rest are irrelevant.
+        """
         if not results:
             return 0.0
-        scores = [r.get('similarity', r.get('score', 0.0)) for r in results]
-        return max(scores) if scores else 0.0
+        scores = sorted(
+            [
+                r.get('rerank_score',
+                      r.get('similarity',
+                            r.get('score', 0.0)))
+                for r in results
+            ],
+            reverse=True,
+        )
+        top_n = scores[:n]
+        return sum(top_n) / len(top_n) if top_n else 0.0
 
     def _quick_relevance_check(self, query: str, results: List[Dict[str, Any]]) -> float:
         """
@@ -76,24 +95,32 @@ class RelevanceCheckNode:
         except Exception as e:
             logger.warning(f'LLM relevance check failed: {e}')
 
-        return self._top1_similarity(results)
+        return self._top_n_avg_similarity(results)
 
     def _compute_score(self, query: str, results: List[Dict[str, Any]]) -> float:
-        """Compute composite relevance score."""
+        """Compute composite relevance score with result count penalty."""
         if not results:
             return 0.0
 
-        top1 = self._top1_similarity(results)
+        avg_sim = self._top_n_avg_similarity(results, n=self.top_n_avg)
 
-        # For high top1 scores, skip LLM check to save cost
-        if top1 >= 0.5:
-            return top1
+        # Penalty for too few results
+        if len(results) < self.min_results:
+            avg_sim *= 0.5
+            logger.debug(
+                'Result count penalty applied: %d < %d (score: %.3f)',
+                len(results), self.min_results, avg_sim,
+            )
+
+        # For high-confidence scores, skip LLM check to save cost
+        if avg_sim >= 0.6:
+            return avg_sim
 
         # For borderline scores, use LLM as secondary judge
         llm_score = self._quick_relevance_check(query, results)
 
-        # Weighted composite: 60% similarity, 40% LLM
-        return 0.6 * top1 + 0.4 * llm_score
+        # Weighted composite
+        return self.sim_weight * avg_sim + self.llm_weight * llm_score
 
     def process(self, state: AgentStateDict) -> AgentStateDict:
         """
@@ -113,8 +140,13 @@ class RelevanceCheckNode:
         relevance_scores[str(retry_count)] = score
         state['relevance_scores'] = relevance_scores
 
-        logger.info(f'Relevance check: score={score:.3f} retry={retry_count}/{self.max_retries} '
-                    f'threshold={self.threshold} results={len(results)}')
+        sub_idx = state.get('current_sub_query_idx', 0)
+        logger.info(
+            'Relevance check: score=%.3f retry=%d/%d threshold=%.2f '
+            'results=%d sub_query=%d',
+            score, retry_count, self.max_retries, self.threshold,
+            len(results), sub_idx,
+        )
 
         return state
 

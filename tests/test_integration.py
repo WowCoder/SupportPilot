@@ -3,7 +3,6 @@ Integration tests for RAG retrieval functionality
 
 Run with: pytest tests/test_integration.py -v
 """
-import pytest
 from unittest.mock import Mock, patch
 import sys
 import os
@@ -78,11 +77,10 @@ class TestSimpleQueryRetrieval:
         """Test simple retrieval through RAG service"""
         from rag.online.service import rag_service
 
-        with patch('rag.online.service.vector_search') as mock_vector:
-            mock_vector.execute.return_value = Mock(
-                success=True,
-                data=[{'content': 'test result', 'similarity': 0.8, 'source': 'test.pdf'}]
-            )
+        with patch('rag.offline.pipeline.rag_utils.retrieve_relevant_info') as mock_retrieve:
+            mock_retrieve.return_value = [
+                {'content': 'test result', 'similarity': 0.8, 'source': 'test.pdf'}
+            ]
 
             results = rag_service.retrieve(
                 query="简单查询",
@@ -90,7 +88,7 @@ class TestSimpleQueryRetrieval:
                 use_small_to_big=True
             )
 
-            # Should return results from vector search
+            # Should return results from simple retrieval
             assert isinstance(results, list)
 
 
@@ -217,7 +215,7 @@ class TestPerformanceAndLatency:
         from rag.online.pipeline.builder import RetrievalAgent
 
         start = time.time()
-        agent = RetrievalAgent()
+        _ = RetrievalAgent()
         elapsed_ms = (time.time() - start) * 1000
 
         # Agent initialization should be < 500ms

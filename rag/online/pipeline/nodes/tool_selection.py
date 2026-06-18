@@ -7,7 +7,7 @@ previous heuristic-based planning.py.
 """
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from rag.online.pipeline.state import AgentStateDict
 from rag.utils.config import get_config
@@ -73,12 +73,14 @@ class ToolSelectionNode:
   }}
 }}
 
-规则：
-- vector_search 总是基础工具（除非查询只需要精确匹配）
-- bm25_search 适用于含有专业术语、代码、编号等需要精确匹配的查询
-- ensemble_retrieval 在选择了2个以上工具时启用，用于融合结果
+选择规则：
+- 中文语义查询 → vector_search 更合适
+- 包含专业术语、代码、编号、英文关键词 → bm25_search 更合适
+- 不确定或混合型查询 → 两者都选，配合 ensemble_retrieval 融合
+- 需要限定来源/日期 → 加入 metadata_filter
+- 选择了2个以上工具时，必须加入 ensemble_retrieval
 - k 默认5，复杂查询可用7-10
-- similarity_threshold 精确匹配查询可用0.3-0.5，语义查询用0.2-0.25
+- similarity_threshold 精确匹配用0.3-0.5，语义查询用0.2-0.25
 - 只输出JSON，不要其他文字"""
 
         user_prompt = f"查询：{query}\n\n请选择检索方案："
@@ -99,12 +101,9 @@ class ToolSelectionNode:
                     response = '\n'.join(lines[1:-1])
                 result = json.loads(response)
 
-                # Ensure vector_search is always included as base
                 tools = result.get('tools', ['vector_search'])
-                if 'vector_search' not in tools:
-                    tools.insert(0, 'vector_search')
 
-                # Auto-add ensemble if multiple tools selected
+                # Auto-add ensemble for multi-tool fusion
                 if len(tools) > 1 and 'ensemble_retrieval' not in tools:
                     tools.append('ensemble_retrieval')
 
@@ -119,9 +118,9 @@ class ToolSelectionNode:
         except Exception as e:
             logger.warning(f'LLM tool selection failed, using defaults: {e}')
 
-        # Fallback: default to vector + ensemble
+        # Fallback: use vector + bm25 + ensemble for best recall
         return {
-            'tools': ['vector_search', 'ensemble_retrieval'],
+            'tools': ['vector_search', 'bm25_search', 'ensemble_retrieval'],
             'params': {'k': 5, 'similarity_threshold': 0.25},
             'query_type': 'factual',
             'reasoning': 'fallback default'
@@ -161,6 +160,9 @@ class ToolSelectionNode:
         """
         Select tools for the current sub-query using LLM reasoning.
 
+        When retrying (retry_count > 0), uses the refined query from
+        state['rewritten_query'] instead of the original sub-query text.
+
         Args:
             state: Current agent state with sub_queries
 
@@ -169,13 +171,18 @@ class ToolSelectionNode:
         """
         sub_queries = list(state.get('sub_queries', []))
         current_idx = state.get('current_sub_query_idx', 0)
+        retry_count = state.get('retry_count', 0)
+        rewritten = state.get('rewritten_query', '')
 
-        # Get current sub-query
-        if current_idx < len(sub_queries):
+        # Get current sub-query — prefer refined query on retry
+        if retry_count > 0 and rewritten:
+            # Retrying: use the refined query from query_refiner
+            query = rewritten
+        elif current_idx < len(sub_queries):
             current_sub = sub_queries[current_idx]
-            query = current_sub.get('query', state.get('rewritten_query', ''))
+            query = current_sub.get('query', rewritten or state.get('query', ''))
         else:
-            query = state.get('rewritten_query', '') or state.get('query', '')
+            query = rewritten or state.get('query', '')
 
         logger.info(f'Selecting tools for sub-query [{current_idx}]: "{query[:50]}..."')
 

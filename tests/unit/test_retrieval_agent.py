@@ -4,7 +4,6 @@ Integration tests for Agentic RAG Retrieval Agent
 Run with: pytest tests/test_retrieval_agent.py -v
 """
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 import sys
 import os
 
@@ -279,7 +278,6 @@ class TestRetrievalAgent:
     def test_timeout_protection(self):
         """Test timeout protection"""
         from rag.online.pipeline.builder import timeout_handler, TimeoutError
-        import signal
 
         # Test that timeout handler works (module-level function)
         with pytest.raises(TimeoutError):
@@ -331,7 +329,12 @@ class TestAgentIntegration:
         assert 'query_decomposition' in graph_nodes
         assert 'tool_selection' in graph_nodes
         assert 'tool_execution' in graph_nodes
+        assert 'rerank' in graph_nodes
+        assert 'relevance_check' in graph_nodes
+        assert 'query_refiner' in graph_nodes
+        assert 'result_aggregation' in graph_nodes
         assert 'answer_generation' in graph_nodes
+        assert 'faithfulness_check' in graph_nodes
 
 
 class TestAgentTimeout:

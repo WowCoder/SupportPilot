@@ -8,7 +8,7 @@ are not relevant enough. Tries progressive strategies:
 3. Rephrase angle (approach from different direction)
 """
 import logging
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from rag.online.pipeline.state import AgentStateDict
 from rag.utils.config import get_config
@@ -34,13 +34,22 @@ class QueryRefinerNode:
         ])
 
     def _get_strategy(self, retry_count: int) -> str:
-        """Get the refinement strategy for current retry."""
-        idx = min(retry_count, len(self.strategies) - 1)
-        return self.strategies[idx]
+        """
+        Get the refinement strategy for current retry.
+
+        Progressive strategy: first broaden, then re-angle, finally narrow.
+        """
+        if retry_count == 0:
+            return 'expand_keywords'    # First retry: try broader terms
+        elif retry_count == 1:
+            return 'rephrase_angle'     # Second retry: different phrasing
+        else:
+            return 'narrow_scope'       # Final retry: focus on core keywords
 
     def _refine_with_llm(self, original_query: str, current_query: str,
                          retry_count: int, results_snippet: str,
-                         query_history: List[str]) -> Optional[str]:
+                         query_history: List[str],
+                         relevance_score: float = 0.0) -> Optional[str]:
         """Use LLM to refine the query based on feedback."""
         strategy = self._get_strategy(retry_count)
         history_str = '\n'.join(f'- {q}' for q in query_history[-5:]) if query_history else '(无)'
@@ -53,7 +62,7 @@ class QueryRefinerNode:
 
         instruction = strategy_instructions.get(strategy, strategy_instructions['expand_keywords'])
 
-        system_prompt = f"""你是一个查询优化助手。当前检索结果不理想，需要改写查询。
+        system_prompt = f"""你是一个查询优化助手。当前检索结果不理想（相似度仅 {relevance_score:.2f}），说明查询与文档库匹配度低。
 
 改写策略：{instruction}
 
@@ -65,12 +74,11 @@ class QueryRefinerNode:
 
         user_prompt = f"""原始问题：{original_query}
 当前查询：{current_query}
+检索相似度：{relevance_score:.2f}
 检索到的内容片段（不理想）：{results_snippet}
 
 已尝试的查询历史：
 {history_str}
-
-改写策略：{strategy}
 
 请输出改写后的查询："""
 
@@ -86,7 +94,7 @@ class QueryRefinerNode:
                 refined = refined.strip().strip('"\'').strip()
                 # Don't reuse previous queries
                 if refined in query_history:
-                    logger.warning(f'Refined query duplicates history, skipping')
+                    logger.warning('Refined query duplicates history, skipping')
                     return None
                 return refined
         except Exception as e:
@@ -110,6 +118,10 @@ class QueryRefinerNode:
         results = list(state.get('retrieval_results', []))
         query_history = list(state.get('query_history', []))
 
+        # Get current relevance score for diagnosis
+        relevance_scores = state.get('relevance_scores', {})
+        current_score = relevance_scores.get(str(retry_count), 0.0)
+
         # Build results snippet for context
         if results:
             snippets = [r.get('content', '')[:100] for r in results[:2]]
@@ -126,17 +138,20 @@ class QueryRefinerNode:
         # Refine query
         refined = self._refine_with_llm(
             original_query, current_query, retry_count,
-            results_snippet, query_history
+            results_snippet, query_history,
+            relevance_score=current_score,
         )
 
         if refined:
-            logger.info(f'Query refined (retry {retry_count + 1}): '
-                       f'"{current_query[:40]}..." -> "{refined[:40]}..."')
+            logger.info(
+                f'Query refined (retry {retry_count + 1}): '
+                f'"{current_query[:40]}..." -> "{refined[:40]}..."'
+            )
             state['rewritten_query'] = refined
             if refined not in query_history:
                 query_history.append(refined)
         else:
-            logger.warning(f'Query refinement produced no result, keeping current query')
+            logger.warning('Query refinement produced no result, keeping current query')
 
         # Update state
         state['query_history'] = query_history

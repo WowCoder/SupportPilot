@@ -63,13 +63,23 @@ class QueryUnderstandingNode:
         Quick pronoun/ellipsis resolution using LLM.
 
         Only triggers when query appears to have unresolved references
-        (short queries, pronouns, etc.).
+        (short queries, pronouns, etc.). Supports both Chinese and English.
         """
         if not history:
             return query
 
-        # Quick heuristic: only resolve if query seems to reference history
-        has_reference = any(kw in query for kw in ['它', '这个', '那个', '这些', '那些', '其', '该', '上面', '刚才'])
+        # Quick heuristic: detect unresolved pronouns/references
+        cn_refs = ['它', '这个', '那个', '这些', '那些', '其', '该', '上面', '刚才']
+        en_refs = ['it', 'this', 'that', 'these', 'those', 'they', 'them',
+                   'he', 'she', 'his', 'her', 'its', 'their',
+                   'above', 'previously', 'earlier', 'before',
+                   'the former', 'the latter', 'the same']
+        all_refs = cn_refs + en_refs
+
+        has_reference = any(
+            kw in query.lower() if kw.isascii() else kw in query
+            for kw in all_refs
+        )
         if not has_reference and len(query) > 10:
             return query
 

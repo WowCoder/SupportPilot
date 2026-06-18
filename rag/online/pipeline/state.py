@@ -5,7 +5,7 @@ Defines the state machine states and event types for LangGraph orchestration.
 """
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Annotated
+from typing import Any, Dict, List, Optional
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -126,6 +126,13 @@ class AgentState:
     faithfulness_score: float = 0.0
     hallucination_flags: List[str] = field(default_factory=list)
 
+    # Global retry (faithfulness failure triggers full re-retrieval)
+    global_retry_count: int = 0
+    max_global_retries: int = 1
+
+    # Rerank
+    reranked_results: List[Dict[str, Any]] = field(default_factory=list)
+
     # Metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -146,7 +153,7 @@ def add_results(left: List[Dict[str, Any]], right: List[Dict[str, Any]]) -> List
 
 
 # TypedDict version for LangGraph compatibility
-from typing import TypedDict, Sequence
+from typing import TypedDict, Sequence  # noqa: E402
 
 
 class AgentStateDict(TypedDict):
@@ -176,6 +183,13 @@ class AgentStateDict(TypedDict):
     # Faithfulness
     faithfulness_score: float
     hallucination_flags: Sequence[str]
+
+    # Global retry (faithfulness failure triggers full re-retrieval)
+    global_retry_count: int
+    max_global_retries: int
+
+    # Rerank
+    reranked_results: Sequence[Dict[str, Any]]
 
     # Metadata
     metadata: Dict[str, Any]

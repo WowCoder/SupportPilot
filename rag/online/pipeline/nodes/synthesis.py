@@ -75,7 +75,7 @@ class SynthesisNode:
                 {"role": "user", "content": user_prompt},
             ]
             answer = llm_client.generate(messages, temperature=0.3, max_tokens=1024)
-            if answer and not answer.startswith("抱歉"):
+            if answer:
                 return answer.strip()
             return None
 
@@ -95,6 +95,15 @@ class SynthesisNode:
         """
         return f"抱歉，未找到与您的问题「{query}」相关的信息。请尝试换一种问法或联系技术支持。"
 
+    def _build_fallback_from_results(self, results: List[Dict[str, Any]]) -> str:
+        """Build a simple fallback response from top results when LLM fails."""
+        parts = []
+        for i, r in enumerate(results[:3], 1):
+            content = r.get('content', '')[:300]
+            source = r.get('source', 'unknown')
+            parts.append(f"[来源 {i}: {source}]\n{content}")
+        return "根据知识库内容：\n\n" + "\n\n".join(parts)
+
     def process(self, state: AgentStateDict) -> AgentStateDict:
         """
         Generate final answer.
@@ -106,7 +115,7 @@ class SynthesisNode:
             Updated state with final answer
         """
         query = state.get('query', '')
-        results = state.get('retrieval_results', [])
+        results = list(state.get('retrieval_results', []))
 
         logger.info(f'Generating answer for: "{query[:50]}..." with {len(results)} results')
 
@@ -115,15 +124,18 @@ class SynthesisNode:
             state['final_answer'] = self._format_no_results_response(query)
             return state
 
-        # Generate answer
+        # Generate answer via LLM
         answer = self._generate_answer(query, results)
 
         if answer:
             logger.info('Answer generated successfully')
             state['final_answer'] = answer
         else:
-            logger.warning('Answer generation failed, using no-results response')
-            state['final_answer'] = self._format_no_results_response(query)
+            # Fallback: build a response directly from results
+            logger.warning(
+                'LLM synthesis failed, falling back to direct result assembly'
+            )
+            state['final_answer'] = self._build_fallback_from_results(results)
 
         return state
 
