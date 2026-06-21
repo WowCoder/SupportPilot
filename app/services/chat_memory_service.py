@@ -4,13 +4,12 @@ Chat Memory Service for SupportPilot
 Handles window management, compression queue, and batch compression.
 """
 import logging
-from datetime import datetime, timedelta
-from typing import List, Optional, Dict
+from datetime import datetime
+from typing import List, Dict
 import threading
 
 from ..extensions import db
 from ..models.chat_memory import ChatMemory
-from ..models.conversation import Conversation
 from ..config import get_config
 
 logger = logging.getLogger(__name__)
@@ -203,7 +202,10 @@ class ChatMemoryService:
         # Simple truncation with ellipsis (placeholder)
         return text[:max_summary_length] + "..."
 
-    def get_session_summaries(self, session_id: int, start_date: datetime = None, end_date: datetime = None) -> List[ChatMemory]:
+    def get_session_summaries(
+        self, session_id: int, start_date: datetime = None,
+        end_date: datetime = None
+    ) -> List[ChatMemory]:
         """
         Get compressed summaries for a session.
 

@@ -4,7 +4,6 @@ Chat Memory model for SupportPilot
 Stores chat conversation records with window management and compression support.
 """
 from datetime import datetime
-from typing import Optional
 
 from ..extensions import db
 

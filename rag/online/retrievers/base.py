@@ -4,7 +4,7 @@ Base Tool abstract class for Agentic RAG system.
 All retrieval tools must inherit from this base class.
 """
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
 

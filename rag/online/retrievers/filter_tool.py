@@ -8,8 +8,7 @@ Supports filtering documents by metadata:
 - Custom metadata key-value filtering
 """
 import logging
-from typing import Any, Dict, List, Optional
-from datetime import datetime
+from typing import Any, Dict, List
 
 from rag.online.retrievers.base import BaseTool, ToolResult
 from rag.utils.config import get_config
@@ -30,7 +29,10 @@ class MetadataFilterTool(BaseTool):
     """
 
     name = "metadata_filter"
-    description = "Filter documents by metadata such as source file, page number, or date range. Can be combined with other retrieval tools."
+    description = (
+        "Filter documents by metadata such as source file, page number, "
+        "or date range. Can be combined with other retrieval tools."
+    )
 
     def __init__(self):
         """Initialize the metadata filter tool."""

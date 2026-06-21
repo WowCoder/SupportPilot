@@ -11,8 +11,8 @@ import os
 os.environ['ORT_DISABLE_COREML'] = '1'
 os.environ['ONNXRUNTIME_DISABLE_CPU'] = '0'
 
-from app import create_app
-from app.config import get_config
+from app import create_app  # noqa: E402
+from app.config import get_config  # noqa: E402
 
 app = create_app()
 

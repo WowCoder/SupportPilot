@@ -6,9 +6,8 @@ Routes queries using a two-tier strategy:
 2. Keyword rules (fast path, high confidence)
 3. LLM-based routing (fallback for unmatched queries)
 """
-import json
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 from rag.utils.config import get_config
 from rag.online.router_rules import RouterRules
@@ -116,7 +115,7 @@ class QueryRouter:
                 return 'agentic', {
                     'method': 'llm_override',
                     'confidence': llm_confidence,
-                    'explanation': f'LLM override: query requires agentic handling'
+                    'explanation': 'LLM override: query requires agentic handling'
                 }
 
         # Default to simple

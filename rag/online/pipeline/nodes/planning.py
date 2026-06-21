@@ -4,7 +4,7 @@ Planning Node for Agentic RAG system.
 Creates retrieval plans based on query type and available tools.
 """
 import logging
-from typing import Any, Dict, List, Optional
+from typing import List
 
 from rag.online.pipeline.state import AgentStateDict, RetrievalPlan
 from rag.utils.config import get_config

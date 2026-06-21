@@ -3,11 +3,11 @@ Ticket API routes for SupportPilot
 
 Handles ticket operations: handoff, close, status.
 """
-from flask import Blueprint, jsonify, request
-from flask_login import current_user, login_required
+from flask import Blueprint, jsonify
+from flask import g
+from ..utils.auth import jwt_required
 import logging
 
-from ..extensions import db
 from ..services.ticket_service import ticket_service
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ ticket_bp = Blueprint('ticket', __name__, url_prefix='/api/ticket')
 
 
 @ticket_bp.route('/<int:session_id>/status', methods=['GET'])
-@login_required
+@jwt_required
 def get_ticket_status(session_id):
     """
     Get ticket status and round count.
@@ -38,7 +38,7 @@ def get_ticket_status(session_id):
 
 
 @ticket_bp.route('/<int:session_id>/handoff', methods=['POST'])
-@login_required
+@jwt_required
 def request_handoff(session_id):
     """
     Request human handoff for a ticket.
@@ -50,7 +50,7 @@ def request_handoff(session_id):
         success = ticket_service.request_human_handoff(session_id)
 
         if success:
-            logger.info(f'User {current_user.id} requested handoff for session {session_id}')
+            logger.info(f'User {g.current_user.id} requested handoff for session {session_id}')
             return jsonify({
                 'success': True,
                 'message': '已请求人工介入，技术支持将尽快为您服务'
@@ -67,7 +67,7 @@ def request_handoff(session_id):
 
 
 @ticket_bp.route('/<int:session_id>/close', methods=['POST'])
-@login_required
+@jwt_required
 def close_ticket(session_id):
     """
     Close a ticket.
@@ -77,12 +77,12 @@ def close_ticket(session_id):
     """
     try:
         # Determine who is closing
-        closed_by = 'tech_support' if current_user.role == 'tech_support' else 'user'
+        closed_by = 'tech_support' if g.current_user.role == 'tech_support' else 'user'
 
         success = ticket_service.close_ticket(
             session_id,
             closed_by=closed_by,
-            user_id=current_user.id
+            user_id=g.current_user.id
         )
 
         if success:

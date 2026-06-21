@@ -4,7 +4,7 @@ Dependency Injection Container for Agentic RAG system.
 Provides centralized service registration and retrieval.
 """
 import logging
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

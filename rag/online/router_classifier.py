@@ -7,7 +7,7 @@ Uses lightweight ML (logistic regression) for query classification:
 - Can be trained on historical query data
 """
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from rag.utils.config import get_config
 

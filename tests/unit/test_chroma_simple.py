@@ -13,7 +13,7 @@ print("=" * 50)
 
 # Test 1: Import and initialize
 print("\n[TEST 1] Initialize RAG Utils...")
-from rag.offline.pipeline import rag_utils
+from rag.offline.pipeline import rag_utils  # noqa: E402
 print(f"✓ RAG Utils loaded, document count: {rag_utils.get_document_count()}")
 
 # Test 2: Create and process a test document

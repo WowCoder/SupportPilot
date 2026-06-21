@@ -8,7 +8,6 @@ from typing import Optional, List, Dict, Any
 
 from ..extensions import db
 from ..models.faq_entry import FAQEntry, FAQVersion
-from ..models.user import User
 from rag.utils.faq_vector_sync import sync_faq_to_chroma, remove_faq_from_chroma, update_faq_in_chroma
 
 logger = logging.getLogger(__name__)

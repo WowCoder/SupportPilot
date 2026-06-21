@@ -11,4 +11,7 @@ from .support_ticket import SupportTicket
 
 from .rag_log import RagRetrievalLog, UserFeedback
 
-__all__ = ['User', 'Conversation', 'Message', 'Document', 'ChatMemory', 'FAQEntry', 'SupportTicket', 'RagRetrievalLog', 'UserFeedback']
+__all__ = [
+    'User', 'Conversation', 'Message', 'Document', 'ChatMemory',
+    'FAQEntry', 'SupportTicket', 'RagRetrievalLog', 'UserFeedback',
+]

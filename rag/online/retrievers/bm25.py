@@ -8,8 +8,7 @@ Supports full-text search using BM25 algorithm:
 """
 import logging
 import re
-from typing import Any, Dict, List, Optional
-from pathlib import Path
+from typing import Any, Dict, List
 
 from rag.online.retrievers.base import BaseTool, ToolResult
 from rag.utils.config import get_config
@@ -89,11 +88,11 @@ class BM25Tool(BaseTool):
 
             if all_docs and all_docs.get('documents'):
                 self._documents = [
-                    {
-                        'content': doc,
-                        'metadata': meta or {}
-                    }
-                    for doc, meta in zip(all_docs['documents'], all_docs.get('metadatas', []) or [{}] * len(all_docs['documents']))
+                    {'content': doc, 'metadata': meta or {}}
+                    for doc, meta in zip(
+                        all_docs['documents'],
+                        all_docs.get('metadatas', []) or [{}] * len(all_docs['documents'])
+                    )
                 ]
                 logger.info(f'BM25: Loaded {len(self._documents)} documents from ChromaDB')
                 self._build_index()
@@ -154,7 +153,6 @@ class BM25Tool(BaseTool):
         Returns:
             BM25 relevance score
         """
-        import math
 
         if doc_index >= len(self._documents):
             return 0.0

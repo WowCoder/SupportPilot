@@ -30,5 +30,29 @@ if [ "$FLASK_ENV" = "production" ]; then
     gunicorn -c gunicorn_config.py wsgi:app
 else
     echo "Starting SupportPilot in development mode..."
-    python -m flask --app wsgi:app run --debug
+    echo ""
+    echo "  Backend:  http://localhost:5050"
+    echo ""
+
+    # Check if frontend dev server should be started
+    FRONTEND_FLAG=""
+    if [ "$1" = "--with-frontend" ] || [ "$1" = "-f" ]; then
+        if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
+            echo "  Frontend: http://localhost:5173"
+            echo ""
+            cd frontend && npm run dev &
+            FRONTEND_PID=$!
+            cd ..
+        else
+            echo "  (Frontend not found — skipping)"
+        fi
+    else
+        echo "  (Add -f or --with-frontend to also start Vue dev server)"
+        echo ""
+    fi
+
+    # Trap to clean up frontend on exit
+    trap "kill $FRONTEND_PID 2>/dev/null" EXIT
+
+    python -m flask --app wsgi:app run --debug --port 5050
 fi

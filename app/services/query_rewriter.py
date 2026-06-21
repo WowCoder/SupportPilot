@@ -8,9 +8,7 @@ import logging
 from typing import List, Optional, Dict
 import re
 
-from ..extensions import db
 from ..models.chat_memory import ChatMemory
-from ..models.conversation import Conversation
 from ..config import get_config
 
 logger = logging.getLogger(__name__)

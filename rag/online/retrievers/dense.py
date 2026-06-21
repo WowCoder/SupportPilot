@@ -6,7 +6,6 @@ Supports Small-to-Big retrieval strategy:
 - Return corresponding large chunks (ParentDocumentStore) for context
 """
 import logging
-from typing import Any, Dict, List, Optional
 
 from rag.online.retrievers.base import BaseTool, ToolResult
 from rag.utils.config import get_config
@@ -40,12 +39,16 @@ class VectorSearchTool(BaseTool):
         self._lazy_load_collection = collection is None
 
     def _get_collection(self):
-        """Lazy-load ChromaDB collection."""
+        """Lazy-load ChromaDB collection with matching embedding function."""
         if self._collection is None and self._lazy_load_collection:
             try:
+                from rag.offline.steps.embedding import CustomEmbeddingFunction
                 import chromadb
                 client = chromadb.PersistentClient(path="./instance/chroma_db")
-                self._collection = client.get_collection("knowledge")
+                embedding_fn = CustomEmbeddingFunction()
+                self._collection = client.get_collection(
+                    "knowledge", embedding_function=embedding_fn
+                )
             except Exception as e:
                 logger.error(f'Failed to load ChromaDB collection: {e}')
                 raise
@@ -74,7 +77,10 @@ class VectorSearchTool(BaseTool):
             # Load config defaults
             k = k or self.config.get('tools.vector.k', 5)
             similarity_threshold = similarity_threshold or self.config.get('tools.vector.similarity_threshold', 0.25)
-            use_small_to_big = use_small_to_big if use_small_to_big is not None else self.config.get('tools.vector.use_small_to_big', True)
+            use_small_to_big = (
+                use_small_to_big if use_small_to_big is not None
+                else self.config.get('tools.vector.use_small_to_big', True)
+            )
 
             collection = self._get_collection()
             if collection is None:
@@ -115,14 +121,16 @@ class VectorSearchTool(BaseTool):
                                 'similarity': float(similarity),
                                 'source': parent_doc['metadata'].get('source', 'unknown'),
                                 'parent_id': parent_id,
-                                'child_content': doc  # Small chunk for reference
+                                'child_content': doc,  # Small chunk for reference
+                                'metadata': parent_doc.get('metadata', {}),
                             })
                 else:
                     # Standard mode: return the chunk directly
                     retrieved.append({
                         'content': doc,
                         'similarity': float(similarity),
-                        'source': meta.get('source', 'unknown') if meta else 'unknown'
+                        'source': meta.get('source', 'unknown') if meta else 'unknown',
+                        'metadata': meta or {},
                     })
 
             # Sort by similarity and limit to k

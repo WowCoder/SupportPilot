@@ -10,7 +10,6 @@ import hashlib
 from ..extensions import db
 from ..models.chat_memory import ChatMemory
 from ..models.faq_entry import FAQEntry
-from ..models.conversation import Conversation
 from ..config import get_config
 
 logger = logging.getLogger(__name__)
@@ -118,7 +117,10 @@ class FAQGenerator:
             self.save_faq(question, answer, session_id)
             saved_count += 1
 
-        logger.info(f'Generated {saved_count} FAQ entries from session {session_id} ({duplicates_skipped} duplicates skipped)')
+        logger.info(
+            f'Generated {saved_count} FAQ entries from session {session_id} '
+            f'({duplicates_skipped} duplicates skipped)'
+        )
 
         return {
             'success': True,
@@ -233,7 +235,10 @@ class FAQGenerator:
             # On error, assume not duplicate to avoid losing FAQs
             return False, None
 
-    def save_faq(self, question: str, answer: str, source_session_id: int, chroma_doc_id: str = None) -> Optional[FAQEntry]:
+    def save_faq(
+        self, question: str, answer: str, source_session_id: int,
+        chroma_doc_id: str = None
+    ) -> Optional[FAQEntry]:
         """
         Save a FAQ entry to both SQLite and ChromaDB.
 

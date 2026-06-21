@@ -4,7 +4,6 @@ FAQ Vector Sync Tool for SupportPilot
 Handles synchronization between FAQ entries and ChromaDB.
 """
 import logging
-import json
 from typing import List, Optional
 
 from rag.offline.parent_store import parent_store
@@ -28,6 +27,8 @@ def sync_faq_to_chroma(faq) -> Optional[List[str]]:
         List of ChromaDB document IDs (parent and children), or None if failed
     """
     try:
+        from langchain_core.documents import Document
+
         # Build document content
         content = f"问题：{faq.question}\n\n答案：{faq.answer}"
 
@@ -45,32 +46,43 @@ def sync_faq_to_chroma(faq) -> Optional[List[str]]:
         parent_size = 2000  # FAQ fits in one parent
         child_size = 400    # Split into smaller chunks for retrieval
 
-        # Create parent-child chunks
-        documents = rag_utils._create_parent_child_chunks(
-            content=content,
-            metadata=metadata,
+        # Create LangChain Document and pass to chunker
+        doc = Document(page_content=content, metadata=metadata)
+        chunk_result = rag_utils._create_parent_child_chunks(
+            documents=[doc],
             parent_size=parent_size,
             child_size=child_size
         )
 
-        if not documents:
+        if not chunk_result or not chunk_result.get('child_chunks'):
             logger.error(f'Failed to create chunks for FAQ {faq.id}')
             return None
 
-        # Add to ChromaDB via parent_store
-        parent_id, child_ids = parent_store.add_parent_with_children(
-            content=content,
-            metadata=metadata,
-            parent_size=parent_size,
-            child_size=child_size
+        parent_chunks = chunk_result['parent_chunks']
+        child_chunks = chunk_result['child_chunks']
+
+        # Store parent chunks to ParentDocumentStore
+        for parent in parent_chunks:
+            parent_store.put(
+                doc_id=parent['id'],
+                content=parent['content'],
+                metadata=parent['metadata']
+            )
+
+        # Add child chunks to ChromaDB
+        child_ids = [c['id'] for c in child_chunks]
+        child_contents = [c['content'] for c in child_chunks]
+        child_metadatas = [c['metadata'] for c in child_chunks]
+
+        rag_utils.collection.add(
+            documents=child_contents,
+            ids=child_ids,
+            metadatas=child_metadatas
         )
 
-        if not parent_id:
-            logger.error(f'Failed to add FAQ {faq.id} to parent_store')
-            return None
-
-        logger.info(f'Synced FAQ {faq.id} to ChromaDB: parent={parent_id}, children={len(child_ids)}')
-        return [parent_id] + child_ids
+        all_ids = [p['id'] for p in parent_chunks] + child_ids
+        logger.info(f'Synced FAQ {faq.id} to ChromaDB: {len(parent_chunks)} parents, {len(child_chunks)} children')
+        return all_ids
 
     except Exception as e:
         logger.error(f'Error syncing FAQ {faq.id} to ChromaDB: {e}', exc_info=True)
@@ -145,6 +157,8 @@ def search_faqs(query: str, k: int = 5, similarity_threshold: float = 0.25) -> L
         List of dicts with faq_id, question, answer, similarity
     """
     try:
+        from rag.online.service import rag_service
+
         # Use RAG service to search
         results = rag_service.retrieve(
             query=query,

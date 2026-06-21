@@ -4,14 +4,12 @@ FAQ Review Service for SupportPilot
 Handles FAQ generation, review workflow, and confirmation.
 """
 import logging
-from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, List
 
 from ..extensions import db
-from ..models.faq_entry import FAQEntry, FAQVersion
+from ..models.faq_entry import FAQEntry
 from ..models.conversation import Conversation
 from ..models.chat_memory import ChatMemory
-from rag.online.service import rag_service
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +94,12 @@ class FAQReviewService:
         messages = [
             {
                 "role": "system",
-                "content": "你是一个FAQ提取专家。从客服对话中提取一个核心问答对。规则：1.问题应简洁明确；2.答案应准确完整；3.去除客套话；4.输出必须为JSON格式：{\"question\": \"...\", \"answer\": \"...\"}"
+                "content": (
+                    "你是一个FAQ提取专家。从客服对话中提取一个核心问答对。"
+                    "规则：1.问题应简洁明确；2.答案应准确完整；3.去除客套话；"
+                    "4.输出必须为JSON格式："
+                    '{"question": "...", "answer": "..."}'
+                )
             },
             {
                 "role": "user",
@@ -122,8 +125,8 @@ class FAQReviewService:
     def _fallback_extraction(self, conversation_text: str):
         """Simple fallback: take first user question as Q, last AI answer as A."""
         lines = conversation_text.split('\n')
-        questions = [l.replace('user: ', '') for l in lines if l.startswith('user: ')]
-        answers = [l.replace('ai: ', '') for l in lines if l.startswith('ai: ')]
+        questions = [line.replace('user: ', '') for line in lines if line.startswith('user: ')]
+        answers = [line.replace('ai: ', '') for line in lines if line.startswith('ai: ')]
 
         question = questions[0] if questions else ''
         answer = answers[-1] if answers else ''

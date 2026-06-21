@@ -7,6 +7,7 @@ env/
 instance/
 parent_store/
 *.db
+data/
 
 # Uploads directory
 uploads/
@@ -60,6 +61,7 @@ chroma_db/
 test_uploads/
 test_knowledge.txt
 .gstack/
+tmp/
 
 # Node
 node_modules/

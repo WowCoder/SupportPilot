@@ -4,7 +4,8 @@ FAQ API routes for SupportPilot
 Handles FAQ operations: generate, review, confirm, reject, CRUD.
 """
 from flask import Blueprint, jsonify, request
-from flask_login import current_user, login_required
+from flask import g
+from ..utils.auth import jwt_required
 import logging
 
 from ..extensions import db
@@ -19,7 +20,7 @@ faq_bp = Blueprint('faq', __name__, url_prefix='/api/faq')
 # ===== Review Workflow APIs =====
 
 @faq_bp.route('/generate', methods=['POST'])
-@login_required
+@jwt_required
 def generate_faq():
     """
     Generate FAQ draft from conversation.
@@ -36,11 +37,11 @@ def generate_faq():
     if not session_id:
         return jsonify({'success': False, 'message': '缺少 session_id'}), 400
 
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': '仅技术支持可生成 FAQ'}), 403
 
     try:
-        faq = faq_review_service.generate_faq_draft(session_id, current_user.id)
+        faq = faq_review_service.generate_faq_draft(session_id, g.current_user.id)
 
         if faq:
             return jsonify({
@@ -62,7 +63,7 @@ def generate_faq():
 
 
 @faq_bp.route('/<int:faq_id>/update', methods=['POST'])
-@login_required
+@jwt_required
 def update_faq_draft(faq_id):
     """
     Update FAQ draft with edits.
@@ -76,7 +77,7 @@ def update_faq_draft(faq_id):
     Returns:
         JSON with success status
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': '仅技术支持可编辑 FAQ'}), 403
 
     data = request.get_json(silent=True) or {}
@@ -87,7 +88,7 @@ def update_faq_draft(faq_id):
             question=data.get('question', ''),
             answer=data.get('answer', ''),
             category=data.get('category', ''),
-            user_id=current_user.id,
+            user_id=g.current_user.id,
             change_reason=data.get('change_reason')
         )
 
@@ -102,7 +103,7 @@ def update_faq_draft(faq_id):
 
 
 @faq_bp.route('/<int:faq_id>/confirm', methods=['POST'])
-@login_required
+@jwt_required
 def confirm_faq(faq_id):
     """
     Confirm FAQ and sync to ChromaDB.
@@ -110,7 +111,7 @@ def confirm_faq(faq_id):
     Returns:
         JSON with success status and progress
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': '仅技术支持可确认 FAQ'}), 403
 
     try:
@@ -136,10 +137,10 @@ def confirm_faq(faq_id):
 
         # Update progress: complete
         faq.sync_progress = 100
-        faq.mark_as_confirmed(current_user.id, chroma_doc_ids)
+        faq.mark_as_confirmed(g.current_user.id, chroma_doc_ids)
 
         # Add final version record
-        version = faq.add_version(current_user.id, 'Confirmed and synced to ChromaDB')
+        version = faq.add_version(g.current_user.id, 'Confirmed and synced to ChromaDB')
         db.session.add(version)
 
         db.session.commit()
@@ -148,7 +149,8 @@ def confirm_faq(faq_id):
         return jsonify({
             'success': True,
             'message': 'FAQ 已确认并添加到知识库',
-            'progress': 100
+            'progress': 100,
+            'sync_status': _compute_sync_status(faq),
         })
 
     except Exception as e:
@@ -161,7 +163,7 @@ def confirm_faq(faq_id):
 
 
 @faq_bp.route('/<int:faq_id>/reject', methods=['POST'])
-@login_required
+@jwt_required
 def reject_faq(faq_id):
     """
     Reject FAQ draft.
@@ -172,7 +174,7 @@ def reject_faq(faq_id):
     Returns:
         JSON with success status
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': '仅技术支持可拒绝 FAQ'}), 403
 
     data = request.get_json(silent=True) or {}
@@ -180,7 +182,7 @@ def reject_faq(faq_id):
     try:
         success = faq_review_service.reject_faq(
             faq_id=faq_id,
-            user_id=current_user.id,
+            user_id=g.current_user.id,
             reason=data.get('reason')
         )
 
@@ -197,10 +199,219 @@ def reject_faq(faq_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@faq_bp.route('/<int:faq_id>/resync', methods=['POST'])
+@jwt_required
+def resync_faq(faq_id):
+    """
+    Re-sync a FAQ entry to ChromaDB.
+
+    For confirmed FAQs that need their vector representation updated
+    (e.g., after content edits or after a sync failure).
+
+    Returns:
+        JSON with success status, progress, and chroma_doc_ids
+    """
+    if g.current_user.role != 'tech_support':
+        return jsonify({'success': False, 'message': '仅技术支持可重新同步 FAQ'}), 403
+
+    try:
+        faq = faq_review_service.get_faq_by_id(faq_id)
+        if not faq:
+            return jsonify({'success': False, 'message': 'FAQ 不存在'}), 404
+
+        from rag.utils.faq_vector_sync import update_faq_in_chroma
+
+        # Update progress: starting
+        faq.sync_progress = 10
+        faq.sync_error = None
+        db.session.commit()
+
+        # Execute re-sync
+        success = update_faq_in_chroma(faq)
+
+        if success:
+            faq.sync_progress = 100
+            db.session.commit()
+            logger.info(f'FAQ {faq_id} re-synced to ChromaDB')
+            return jsonify({
+                'success': True,
+                'message': '已重新同步到知识库',
+                'progress': 100,
+                'sync_status': _compute_sync_status(faq),
+            })
+        else:
+            faq.sync_progress = 0
+            faq.sync_error = '向量化同步失败'
+            db.session.commit()
+            return jsonify({
+                'success': False,
+                'message': '同步失败',
+                'progress': 0,
+                'sync_status': _compute_sync_status(faq),
+            }), 500
+
+    except Exception as e:
+        logger.error(f'Error resyncing FAQ {faq_id}: {e}', exc_info=True)
+        try:
+            faq = faq_review_service.get_faq_by_id(faq_id)
+            if faq:
+                faq.sync_progress = 0
+                faq.sync_error = str(e)
+                db.session.commit()
+        except Exception:
+            pass
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ===== Search Testing API =====
+
+@faq_bp.route('/test-search', methods=['POST'])
+@jwt_required
+def test_search():
+    """
+    Test vector search against FAQ entries in the knowledge base.
+
+    Input a user question, returns which FAQs would be retrieved
+    with similarity scores, helping tech support understand what
+    the AI "sees" for a given query.
+
+    Request JSON:
+        - query: Search query (required)
+        - k: Number of results (default 5)
+        - similarity_threshold: Minimum similarity (default 0.25)
+
+    Returns:
+        JSON with matched FAQs and similarity scores
+    """
+    if g.current_user.role != 'tech_support':
+        return jsonify({'success': False, 'message': '仅技术支持可使用检索测试'}), 403
+
+    data = request.get_json(silent=True) or {}
+    query = data.get('query', '').strip()
+    k = data.get('k', 5)
+    similarity_threshold = data.get('similarity_threshold', 0.25)
+
+    if not query:
+        return jsonify({'success': False, 'message': '请输入搜索内容'}), 400
+
+    try:
+        from rag.online.service import rag_service
+        from ..models.faq_entry import FAQEntry
+
+        # Use RAG service to search the full knowledge base
+        results = rag_service.retrieve(
+            query=query,
+            k=k,
+            similarity_threshold=0.0,  # Get all results, we filter below
+            use_small_to_big=True,
+        )
+
+        # Filter for FAQ-sourced chunks and enrich with DB data
+        faq_results = []
+        seen_faq_ids = set()  # dedup across chunks from the same FAQ
+
+        for r in results:
+            metadata = r.get('metadata', {})
+            similarity = r.get('similarity', 0)
+            source = r.get('source', '')
+
+            # Match FAQ chunks by faq_id (new data) or source='faq' (old data)
+            faq_id_str = metadata.get('faq_id')
+            is_faq_source = source == 'faq' or faq_id_str is not None
+
+            if not is_faq_source:
+                continue
+
+            faq = None
+
+            if faq_id_str:
+                try:
+                    faq_id = int(faq_id_str)
+                    if faq_id not in seen_faq_ids:
+                        faq = FAQEntry.query.get(faq_id)
+                except (ValueError, TypeError):
+                    pass
+
+            # Fallback: old FAQ chunks without faq_id — match by question text in content
+            if faq is None:
+                content = r.get('content', '')
+                # FAQ content format: "问题：...\n\n答案：..."
+                for existing_faq in FAQEntry.query.filter_by(status='confirmed').all():
+                    if existing_faq.id in seen_faq_ids:
+                        continue
+                    if existing_faq.question and existing_faq.question in content:
+                        faq = existing_faq
+                        break
+
+            if faq is None:
+                continue
+
+            if faq.id in seen_faq_ids:
+                continue
+            seen_faq_ids.add(faq.id)
+
+            faq_results.append({
+                'faq_id': faq.id,
+                'question': faq.question,
+                'answer': faq.answer,
+                'category': faq.category or '',
+                'status': faq.status,
+                'sync_status': _compute_sync_status(faq),
+                'similarity': round(similarity, 4),
+                'will_be_used': similarity >= similarity_threshold,
+            })
+
+        return jsonify({
+            'success': True,
+            'query': query,
+            'results': faq_results,
+            'total_matches': len(faq_results),
+        })
+
+    except Exception as e:
+        logger.error(f'Error in FAQ test search: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ===== Management APIs =====
 
+def _compute_sync_status(faq) -> str:
+    """Compute vector DB sync status for a FAQ entry.
+
+    Returns:
+        'synced' — confirmed and has chroma_doc_ids
+        'pending_sync' — confirmed but no chroma_doc_ids, or pending_review
+        'sync_failed' — has sync_error
+        'not_synced' — draft, rejected, or deleted
+    """
+    if faq.sync_error:
+        return 'sync_failed'
+    if faq.status == 'confirmed' and faq.chroma_doc_ids:
+        return 'synced'
+    if faq.status in ('confirmed', 'pending_review'):
+        return 'pending_sync'
+    return 'not_synced'
+
+
+def _faq_to_dict(faq) -> dict:
+    """Serialize FAQEntry to dict with sync status."""
+    return {
+        'id': faq.id,
+        'question': faq.question,
+        'answer': faq.answer,
+        'category': faq.category,
+        'status': faq.status,
+        'sync_status': _compute_sync_status(faq),
+        'sync_error': faq.sync_error,
+        'sync_progress': faq.sync_progress,
+        'created_at': faq.created_at.isoformat() if faq.created_at else None,
+        'updated_at': faq.updated_at.isoformat() if faq.updated_at else None,
+        'creator': faq.creator.username if faq.creator else None,
+    }
+
+
 @faq_bp.route('', methods=['GET'])
-@login_required
+@jwt_required
 def list_faqs():
     """
     List FAQ entries with optional filtering.
@@ -213,7 +424,7 @@ def list_faqs():
         - per_page: Items per page (default 20)
 
     Returns:
-        JSON with FAQ list and pagination
+        JSON with FAQ list, pagination, and sync stats
     """
     try:
         result = faq_management_service.get_all_faqs(
@@ -224,21 +435,22 @@ def list_faqs():
             per_page=request.args.get('per_page', 20, type=int)
         )
 
+        items = [_faq_to_dict(faq) for faq in result['items']]
+
+        # Compute aggregate sync stats across ALL non-deleted FAQs
+        from ..models.faq_entry import FAQEntry
+        all_faqs = FAQEntry.query.filter(FAQEntry.status != 'deleted').all()
+        stats = {'total': 0, 'synced': 0, 'pending_sync': 0, 'sync_failed': 0, 'not_synced': 0}
+        for f in all_faqs:
+            s = _compute_sync_status(f)
+            stats['total'] += 1
+            stats[s] = stats.get(s, 0) + 1
+
         return jsonify({
             'success': True,
-            'items': [
-                {
-                    'id': faq.id,
-                    'question': faq.question,
-                    'answer': faq.answer,
-                    'category': faq.category,
-                    'status': faq.status,
-                    'created_at': faq.created_at.isoformat() if faq.created_at else None,
-                    'creator': faq.creator.username if faq.creator else None
-                }
-                for faq in result['items']
-            ],
-            'pagination': result['pagination']
+            'items': items,
+            'pagination': result['pagination'],
+            'stats': stats,
         })
 
     except Exception as e:
@@ -247,7 +459,7 @@ def list_faqs():
 
 
 @faq_bp.route('', methods=['POST'])
-@login_required
+@jwt_required
 def create_faq():
     """
     Create a new FAQ entry.
@@ -261,7 +473,7 @@ def create_faq():
     Returns:
         JSON with created FAQ
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': '仅技术支持可创建 FAQ'}), 403
 
     data = request.get_json(silent=True) or {}
@@ -274,20 +486,14 @@ def create_faq():
             question=data.get('question', ''),
             answer=data.get('answer', ''),
             category=data.get('category', ''),
-            user_id=current_user.id,
+            user_id=g.current_user.id,
             status=data.get('status', 'draft')
         )
 
         if faq:
             response = jsonify({
                 'success': True,
-                'faq': {
-                    'id': faq.id,
-                    'question': faq.question,
-                    'answer': faq.answer,
-                    'category': faq.category,
-                    'status': faq.status
-                }
+                'faq': _faq_to_dict(faq),
             })
             response.status_code = 201
             return response
@@ -300,13 +506,13 @@ def create_faq():
 
 
 @faq_bp.route('/<int:faq_id>', methods=['GET'])
-@login_required
+@jwt_required
 def get_faq(faq_id):
     """
     Get a single FAQ entry by ID.
 
     Returns:
-        JSON with FAQ details
+        JSON with FAQ details including sync status
     """
     try:
         faq = faq_management_service.get_faq_by_id(faq_id)
@@ -315,16 +521,7 @@ def get_faq(faq_id):
 
         return jsonify({
             'success': True,
-            'faq': {
-                'id': faq.id,
-                'question': faq.question,
-                'answer': faq.answer,
-                'category': faq.category,
-                'status': faq.status,
-                'sync_progress': faq.sync_progress,
-                'created_at': faq.created_at.isoformat() if faq.created_at else None,
-                'creator': faq.creator.username if faq.creator else None
-            }
+            'faq': _faq_to_dict(faq),
         })
 
     except Exception as e:
@@ -333,7 +530,7 @@ def get_faq(faq_id):
 
 
 @faq_bp.route('/<int:faq_id>', methods=['PUT'])
-@login_required
+@jwt_required
 def update_faq(faq_id):
     """
     Update an FAQ entry.
@@ -347,7 +544,7 @@ def update_faq(faq_id):
     Returns:
         JSON with success status
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': '仅技术支持可编辑 FAQ'}), 403
 
     data = request.get_json(silent=True) or {}
@@ -358,7 +555,7 @@ def update_faq(faq_id):
             question=data.get('question'),
             answer=data.get('answer'),
             category=data.get('category'),
-            user_id=current_user.id,
+            user_id=g.current_user.id,
             change_reason=data.get('change_reason')
         )
 
@@ -373,7 +570,7 @@ def update_faq(faq_id):
 
 
 @faq_bp.route('/<int:faq_id>', methods=['DELETE'])
-@login_required
+@jwt_required
 def delete_faq(faq_id):
     """
     Delete an FAQ entry (soft delete).
@@ -381,7 +578,7 @@ def delete_faq(faq_id):
     Returns:
         JSON with success status
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': '仅技术支持可删除 FAQ'}), 403
 
     try:
@@ -401,7 +598,7 @@ def delete_faq(faq_id):
 
 
 @faq_bp.route('/<int:faq_id>/versions', methods=['GET'])
-@login_required
+@jwt_required
 def get_faq_versions(faq_id):
     """
     Get version history for an FAQ entry.
@@ -433,7 +630,7 @@ def get_faq_versions(faq_id):
 
 
 @faq_bp.route('/bulk-delete', methods=['POST'])
-@login_required
+@jwt_required
 def bulk_delete_faqs():
     """
     Delete multiple FAQ entries.
@@ -444,7 +641,7 @@ def bulk_delete_faqs():
     Returns:
         JSON with success/failed counts
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': '仅技术支持可批量删除 FAQ'}), 403
 
     data = request.get_json(silent=True) or {}

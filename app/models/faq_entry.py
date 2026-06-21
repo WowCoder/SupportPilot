@@ -4,7 +4,7 @@ FAQ Entry model for SupportPilot
 Stores FAQ entries extracted from closed conversations for RAG retrieval.
 """
 from datetime import datetime
-from typing import Optional, List
+from typing import List
 
 from ..extensions import db
 

@@ -4,13 +4,14 @@ API Blueprint for SupportPilot
 REST API endpoints for RAG and document operations.
 """
 from flask import Blueprint, jsonify, request, session
-from flask_login import current_user, login_required
+from flask import g
+from ..utils.auth import jwt_required
 import logging
 import os
 import tempfile
 
 from rag.online.service import rag_service
-from rag.offline.cleaning import document_cleaner, CleaningOptions
+from rag.offline.steps.cleaning import document_cleaner, CleaningOptions
 from rag.offline.pipeline import RAGUtils
 
 logger = logging.getLogger(__name__)
@@ -21,9 +22,9 @@ rag_processor = RAGUtils()
 
 
 @api_bp.route('/document/count', methods=['GET'])
-@login_required
+@jwt_required
 def get_document_count():
-    """Get total document count in RAG system"""
+    """Get total chunk count in RAG system"""
     try:
         count = rag_service.get_document_count()
         return jsonify({'success': True, 'count': count})
@@ -32,11 +33,48 @@ def get_document_count():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@api_bp.route('/documents', methods=['GET'])
+@jwt_required
+def list_documents():
+    """List uploaded documents with processing metadata.
+
+    Returns paginated document list with strategy, chunks_count,
+    status for the admin document table.
+    """
+    if g.current_user.role != 'tech_support':
+        return jsonify({'success': False, 'message': 'Permission denied'}), 403
+
+    from ..models import Document
+
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    query = Document.query.filter_by(uploaded_by=g.current_user.id)
+    total = query.count()
+    docs = query.order_by(Document.uploaded_at.desc()) \
+        .offset((page - 1) * per_page).limit(per_page).all()
+
+    items = [d.to_dict() for d in docs]
+    pages = max(1, (total + per_page - 1) // per_page)
+
+    return jsonify({
+        'success': True,
+        'items': items,
+        'pagination': {
+            'page': page,
+            'pages': pages,
+            'total': total,
+            'has_prev': page > 1,
+            'has_next': page < pages,
+        },
+    })
+
+
 @api_bp.route('/test-query', methods=['POST'])
-@login_required
+@jwt_required
 def test_query():
     """Test RAG retrieval with a query (tech support only)"""
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
     # Handle both JSON and form data
@@ -86,10 +124,10 @@ def test_query():
 
 
 @api_bp.route('/preview-chunks', methods=['POST'])
-@login_required
+@jwt_required
 def preview_chunks():
     """Preview document chunking without saving to knowledge base (tech support only)"""
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
     # Get file and parameters
@@ -107,7 +145,11 @@ def preview_chunks():
     parent_size = int(request.form.get('parent_size', 2000))
     child_size = int(request.form.get('child_size', 400))
 
-    logger.info(f'Preview chunks request: strategy={strategy}, semantic_threshold={semantic_threshold}, small_to_big={use_small_to_big}')
+    logger.info(
+        f'Preview chunks request: strategy={strategy}, '
+        f'semantic_threshold={semantic_threshold}, '
+        f'small_to_big={use_small_to_big}'
+    )
 
     # Validate file extension
     ext = os.path.splitext(file.filename)[1].lower()
@@ -155,13 +197,13 @@ def preview_chunks():
 
 
 @api_bp.route('/extract-document', methods=['POST'])
-@login_required
+@jwt_required
 def extract_document():
     """Extract raw text and metadata from document (tech support only)
 
     Returns raw text, PDF metadata, and page information for cleaning preview.
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
     file = request.files.get('file')
@@ -225,13 +267,13 @@ def extract_document():
 
 
 @api_bp.route('/preview-cleaning', methods=['POST'])
-@login_required
+@jwt_required
 def preview_cleaning():
     """Preview cleaning effect on extracted document (tech support only)
 
     Returns before/after comparison with diff visualization.
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
     # Check for temp path from previous extraction
@@ -275,13 +317,13 @@ def preview_cleaning():
 
 
 @api_bp.route('/confirm-cleaning', methods=['POST'])
-@login_required
+@jwt_required
 def confirm_cleaning():
     """Confirm cleaning and save metadata (tech support only)
 
     Saves edited metadata and returns cleaned text for chunking.
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
     # Check for temp path from previous extraction

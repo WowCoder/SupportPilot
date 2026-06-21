@@ -148,7 +148,7 @@ def timed_tool(func: Callable) -> Callable:
                 result_count=len(result.data) if hasattr(result, 'data') and result.data else 0
             )
             return result
-        except Exception as e:
+        except Exception:
             duration_ms = (time.time() - start) * 1000
             MetricsCollector().record_tool_call(
                 tool_name=getattr(self, 'name', 'unknown'),

@@ -192,7 +192,9 @@ async def test_db_records():
         # Check logs exist
         resp = await page.evaluate("fetch('/api/rag-logs/stats').then(r => r.json())")
         total = resp.get("stats", {}).get("total_queries", 0)
-        print(f"✓ DB records: {total} retrieval logs, {resp['stats'].get('avg_similarity', 0)} avg similarity, {resp['stats'].get('positive_rate', 0)}% positive feedback")
+        avg_sim = resp['stats'].get('avg_similarity', 0)
+        pos_rate = resp['stats'].get('positive_rate', 0)
+        print(f"✓ DB records: {total} retrieval logs, {avg_sim} avg similarity, {pos_rate}% positive feedback")
 
         await browser.close()
 

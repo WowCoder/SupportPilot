@@ -13,11 +13,17 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+# Absolute path to llm_config.yaml, resolved relative to this file
+_LLM_CONFIG_DEFAULT = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "config", "llm_config.yaml"
+)
+
 
 class LLMClient:
     """Unified LLM client supporting OpenAI-compatible and Anthropic-compatible APIs."""
 
-    def __init__(self, config_path: str = "config/llm_config.yaml"):
+    def __init__(self, config_path: str = _LLM_CONFIG_DEFAULT):
         self._config_path = config_path
         self._config: Dict = {}
         self._provider: str = "openai_compatible"

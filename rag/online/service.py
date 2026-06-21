@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional
 
 from rag.online.pipeline.builder import retrieval_agent
 from rag.online.router import query_router
-from rag.online.retrievers.dense import vector_search
 
 logger = logging.getLogger(__name__)
 
@@ -62,15 +61,14 @@ class RAGService:
                     # Fall through to simple retrieval
 
             if route_type == 'simple' or not results:
-                # Simple retrieval using vector search
+                # Simple retrieval using rag_utils (shares same collection/embedding as ingestion)
                 logger.info(f'Routing query to simple path: {query[:50]}...')
-                result = vector_search.execute(
+                from rag.offline.pipeline import rag_utils
+                results = rag_utils.retrieve_relevant_info(
                     query=query,
                     k=k,
                     similarity_threshold=similarity_threshold,
-                    use_small_to_big=use_small_to_big
                 )
-                results = result.data if result and result.success else []
 
         except Exception as e:
             logger.error(f'Retrieval error: {e}', exc_info=True)

@@ -3,8 +3,6 @@ Unit tests for Query Router
 
 Run with: pytest tests/test_router.py -v
 """
-import pytest
-from unittest.mock import Mock, patch
 import sys
 import os
 

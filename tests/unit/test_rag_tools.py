@@ -3,8 +3,7 @@ Unit tests for Agentic RAG retrieval tools
 
 Run with: pytest tests/test_rag_tools.py -v
 """
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import sys
 import os
 

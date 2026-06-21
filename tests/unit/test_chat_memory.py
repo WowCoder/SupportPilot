@@ -3,10 +3,9 @@ Unit tests for Chat Memory System
 Run with: pytest tests/test_chat_memory.py -v
 """
 import pytest
-from datetime import datetime, timedelta
 from app import create_app
 from app.extensions import db
-from app.models import User, Conversation, ChatMemory, FAQEntry
+from app.models import User, Conversation
 from app.services.chat_memory_service import ChatMemoryService
 from app.services.query_rewriter import QueryRewriter
 from app.services.faq_generator import FAQGenerator

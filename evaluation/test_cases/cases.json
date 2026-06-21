@@ -1,0 +1,415 @@
+{
+  "meta": {
+    "version": "1.0",
+    "created": "2026-06-17",
+    "description": "SupportPilot RAG evaluation test cases — 50 Chinese customer-support queries across 11 categories",
+    "language": "zh"
+  },
+  "categories": [
+    "comparison",
+    "listing",
+    "summarization",
+    "analysis",
+    "reasoning",
+    "multi-hop",
+    "explanation",
+    "how-to",
+    "definition",
+    "factual",
+    "numerical"
+  ],
+  "cases": [
+    {
+      "id": "comp_001",
+      "category": "comparison",
+      "difficulty": "easy",
+      "query": "对比标准配送和加急配送在时效和费用上的区别",
+      "expected_topics": ["配送方式", "时效", "费用"],
+      "notes": "Basic comparison between two shipping methods"
+    },
+    {
+      "id": "comp_002",
+      "category": "comparison",
+      "difficulty": "medium",
+      "query": "比较退款和换货的处理流程有什么不同",
+      "expected_topics": ["退款", "换货", "售后流程"],
+      "notes": "Compare refund vs exchange procedures"
+    },
+    {
+      "id": "comp_003",
+      "category": "comparison",
+      "difficulty": "medium",
+      "query": "对比普通会员和VIP会员在权益上的差异",
+      "expected_topics": ["会员等级", "权益对比"],
+      "notes": "Membership tier comparison"
+    },
+    {
+      "id": "comp_004",
+      "category": "comparison",
+      "difficulty": "hard",
+      "query": "对比三种支付方式在手续费、到账时间和限额方面的优劣",
+      "expected_topics": ["支付方式", "手续费", "到账时间", "限额"],
+      "notes": "Multi-dimensional payment method comparison"
+    },
+    {
+      "id": "comp_005",
+      "category": "comparison",
+      "difficulty": "easy",
+      "query": "国际配送和国内配送有什么区别",
+      "expected_topics": ["国际配送", "国内配送", "配送政策"],
+      "notes": "International vs domestic shipping"
+    },
+    {
+      "id": "list_001",
+      "category": "listing",
+      "difficulty": "easy",
+      "query": "列出所有可用的支付方式",
+      "expected_topics": ["支付方式"],
+      "notes": "List all payment methods"
+    },
+    {
+      "id": "list_002",
+      "category": "listing",
+      "difficulty": "medium",
+      "query": "列举会员可以享受的所有专属服务",
+      "expected_topics": ["会员服务", "专属权益"],
+      "notes": "List membership benefits"
+    },
+    {
+      "id": "list_003",
+      "category": "listing",
+      "difficulty": "easy",
+      "query": "有哪些情况可以申请退货退款",
+      "expected_topics": ["退货政策", "退款条件"],
+      "notes": "List return/refund scenarios"
+    },
+    {
+      "id": "list_004",
+      "category": "listing",
+      "difficulty": "hard",
+      "query": "汇总一下客服可以提供的所有售后服务类型",
+      "expected_topics": ["售后服务", "客服支持"],
+      "notes": "Summarize all after-sales service types"
+    },
+    {
+      "id": "list_005",
+      "category": "listing",
+      "difficulty": "medium",
+      "query": "列出目前支持配送的所有国家和地区",
+      "expected_topics": ["配送范围", "国际物流"],
+      "notes": "List supported shipping regions"
+    },
+    {
+      "id": "summ_001",
+      "category": "summarization",
+      "difficulty": "medium",
+      "query": "总结一下我们公司的主要售后政策",
+      "expected_topics": ["售后政策"],
+      "notes": "Summarize after-sales policies"
+    },
+    {
+      "id": "summ_002",
+      "category": "summarization",
+      "difficulty": "hard",
+      "query": "概括说明整个订单生命周期从下单到收货的流程",
+      "expected_topics": ["订单流程", "下单", "发货", "收货"],
+      "notes": "Summarize the full order lifecycle"
+    },
+    {
+      "id": "summ_003",
+      "category": "summarization",
+      "difficulty": "medium",
+      "query": "概述客服处理客户投诉的标准流程",
+      "expected_topics": ["投诉处理", "客服流程"],
+      "notes": "Summarize complaint handling process"
+    },
+    {
+      "id": "summ_004",
+      "category": "summarization",
+      "difficulty": "easy",
+      "query": "总结一下如何保障用户账户安全",
+      "expected_topics": ["账户安全", "安全措施"],
+      "notes": "Summarize account security measures"
+    },
+    {
+      "id": "anal_001",
+      "category": "analysis",
+      "difficulty": "hard",
+      "query": "分析客户对配送时效投诉的主要原因有哪些",
+      "expected_topics": ["配送时效", "客户投诉", "原因分析"],
+      "notes": "Analyze delivery delay complaint causes"
+    },
+    {
+      "id": "anal_002",
+      "category": "analysis",
+      "difficulty": "hard",
+      "query": "分析为什么部分用户在结算页面会放弃购买",
+      "expected_topics": ["用户行为", "结算流程", "转化率"],
+      "notes": "Analyze checkout abandonment reasons"
+    },
+    {
+      "id": "anal_003",
+      "category": "analysis",
+      "difficulty": "medium",
+      "query": "分析多件商品合并配送和分开配送各自的优缺点",
+      "expected_topics": ["配送策略", "合并配送", "拆分配送"],
+      "notes": "Analyze consolidated vs split shipping"
+    },
+    {
+      "id": "anal_004",
+      "category": "analysis",
+      "difficulty": "medium",
+      "query": "分析优惠券使用率低可能的原因",
+      "expected_topics": ["优惠券", "使用率", "用户行为"],
+      "notes": "Analyze low coupon usage rate"
+    },
+    {
+      "id": "reas_001",
+      "category": "reasoning",
+      "difficulty": "medium",
+      "query": "为什么我的订单显示已签收但我没有收到货物",
+      "expected_topics": ["订单状态", "签收", "物流异常"],
+      "notes": "Reason about signed-but-not-received scenario"
+    },
+    {
+      "id": "reas_002",
+      "category": "reasoning",
+      "difficulty": "medium",
+      "query": "为什么退款金额比我实际支付的少了一部分",
+      "expected_topics": ["退款计算", "费用扣除"],
+      "notes": "Reason about partial refund amount"
+    },
+    {
+      "id": "reas_003",
+      "category": "reasoning",
+      "difficulty": "hard",
+      "query": "为什么使用优惠券的订单退款时优惠金额不予退还",
+      "expected_topics": ["优惠券规则", "退款政策"],
+      "notes": "Reason about coupon refund logic"
+    },
+    {
+      "id": "reas_004",
+      "category": "reasoning",
+      "difficulty": "easy",
+      "query": "为什么某些商品不支持货到付款",
+      "expected_topics": ["货到付款", "商品限制"],
+      "notes": "Reason about COD restrictions"
+    },
+    {
+      "id": "mult_001",
+      "category": "multi-hop",
+      "difficulty": "hard",
+      "query": "如果我用国际信用卡支付海外订单，汇率是怎么计算的，退款时汇率差价会退还吗",
+      "expected_topics": ["国际支付", "汇率", "退款规则"],
+      "notes": "Multi-hop: international payment → exchange rate → refund"
+    },
+    {
+      "id": "mult_002",
+      "category": "multi-hop",
+      "difficulty": "hard",
+      "query": "会员升级后原有积分会保留吗，积分倍数什么时候生效，之前下的单能补积分吗",
+      "expected_topics": ["会员升级", "积分规则", "积分追溯"],
+      "notes": "Multi-hop: membership upgrade → points → retroactive"
+    },
+    {
+      "id": "mult_003",
+      "category": "multi-hop",
+      "difficulty": "hard",
+      "query": "对于使用了生日优惠券的商品申请退货，退款金额怎么算，优惠券会退回吗",
+      "expected_topics": ["退货", "优惠券", "退款计算"],
+      "notes": "Multi-hop: birthday coupon → return → refund calculation"
+    },
+    {
+      "id": "mult_004",
+      "category": "multi-hop",
+      "difficulty": "medium",
+      "query": "海外仓发货的订单从下单到送达需要经过哪些环节，每个环节大概需要多久",
+      "expected_topics": ["海外仓", "物流环节", "时效"],
+      "notes": "Multi-hop: overseas warehouse → logistics steps → time estimate"
+    },
+    {
+      "id": "expl_001",
+      "category": "explanation",
+      "difficulty": "easy",
+      "query": "为什么我的账户被冻结了",
+      "expected_topics": ["账户冻结", "安全规则"],
+      "notes": "Explain account freeze reasons"
+    },
+    {
+      "id": "expl_002",
+      "category": "explanation",
+      "difficulty": "medium",
+      "query": "为什么物流信息好几天没有更新了",
+      "expected_topics": ["物流追踪", "信息延迟"],
+      "notes": "Explain tracking update delays"
+    },
+    {
+      "id": "expl_003",
+      "category": "explanation",
+      "difficulty": "medium",
+      "query": "为什么有时候选择货到付款还要先付定金",
+      "expected_topics": ["货到付款", "定金规则"],
+      "notes": "Explain deposit requirement for COD"
+    },
+    {
+      "id": "expl_004",
+      "category": "explanation",
+      "difficulty": "easy",
+      "query": "为什么取消订单后钱没有立即退回",
+      "expected_topics": ["退款时效", "银行处理"],
+      "notes": "Explain refund processing time"
+    },
+    {
+      "id": "how_001",
+      "category": "how-to",
+      "difficulty": "easy",
+      "query": "如何申请退货退款",
+      "expected_topics": ["退货流程", "退款申请"],
+      "notes": "How to request return/refund"
+    },
+    {
+      "id": "how_002",
+      "category": "how-to",
+      "difficulty": "easy",
+      "query": "怎么修改收货地址",
+      "expected_topics": ["收货地址", "订单修改"],
+      "notes": "How to change shipping address"
+    },
+    {
+      "id": "how_003",
+      "category": "how-to",
+      "difficulty": "medium",
+      "query": "如何查询快递的实时物流信息",
+      "expected_topics": ["物流查询", "快递追踪"],
+      "notes": "How to track package"
+    },
+    {
+      "id": "how_004",
+      "category": "how-to",
+      "difficulty": "medium",
+      "query": "怎么把普通会员升级成VIP会员",
+      "expected_topics": ["会员升级", "VIP"],
+      "notes": "How to upgrade membership"
+    },
+    {
+      "id": "how_005",
+      "category": "how-to",
+      "difficulty": "hard",
+      "query": "如何在App上同时管理多个收货地址并设置默认地址",
+      "expected_topics": ["地址管理", "App操作"],
+      "notes": "How to manage multiple addresses on App"
+    },
+    {
+      "id": "def_001",
+      "category": "definition",
+      "difficulty": "easy",
+      "query": "什么是VIP会员",
+      "expected_topics": ["VIP", "会员定义"],
+      "notes": "Define VIP membership"
+    },
+    {
+      "id": "def_002",
+      "category": "definition",
+      "difficulty": "easy",
+      "query": "什么是跨境配送",
+      "expected_topics": ["跨境配送", "国际物流"],
+      "notes": "Define cross-border shipping"
+    },
+    {
+      "id": "def_003",
+      "category": "definition",
+      "difficulty": "easy",
+      "query": "什么是货到付款",
+      "expected_topics": ["货到付款", "支付方式"],
+      "notes": "Define COD payment"
+    },
+    {
+      "id": "def_004",
+      "category": "definition",
+      "difficulty": "medium",
+      "query": "什么是购物积分以及积分有什么用途",
+      "expected_topics": ["积分", "积分用途"],
+      "notes": "Define shopping points and their uses"
+    },
+    {
+      "id": "fact_001",
+      "category": "factual",
+      "difficulty": "easy",
+      "query": "客服的工作时间是几点到几点",
+      "expected_topics": ["客服工作时间"],
+      "notes": "Customer service hours"
+    },
+    {
+      "id": "fact_002",
+      "category": "factual",
+      "difficulty": "easy",
+      "query": "退货申请需要在收到货后多少天内提出",
+      "expected_topics": ["退货期限"],
+      "notes": "Return window deadline"
+    },
+    {
+      "id": "fact_003",
+      "category": "factual",
+      "difficulty": "medium",
+      "query": "哪些商品不能享受七天无理由退货",
+      "expected_topics": ["退货例外", "特殊商品"],
+      "notes": "Products excluded from 7-day return policy"
+    },
+    {
+      "id": "fact_004",
+      "category": "factual",
+      "difficulty": "easy",
+      "query": "目前支持哪几种语言的人工客服",
+      "expected_topics": ["客服语言", "人工服务"],
+      "notes": "Supported customer service languages"
+    },
+    {
+      "id": "fact_005",
+      "category": "factual",
+      "difficulty": "medium",
+      "query": "投诉受理后一般几个工作日内会回复",
+      "expected_topics": ["投诉时效", "回复时间"],
+      "notes": "Complaint response time"
+    },
+    {
+      "id": "num_001",
+      "category": "numerical",
+      "difficulty": "easy",
+      "query": "满多少元可以享受包邮",
+      "expected_topics": ["包邮门槛"],
+      "notes": "Free shipping threshold"
+    },
+    {
+      "id": "num_002",
+      "category": "numerical",
+      "difficulty": "easy",
+      "query": "退货的运费由谁承担，金额有上限吗",
+      "expected_topics": ["退货运费", "报销上限"],
+      "notes": "Return shipping cost limit"
+    },
+    {
+      "id": "num_003",
+      "category": "numerical",
+      "difficulty": "medium",
+      "query": "首次购物可以享受多少折扣",
+      "expected_topics": ["首单优惠", "折扣比例"],
+      "notes": "First purchase discount amount"
+    },
+    {
+      "id": "num_004",
+      "category": "numerical",
+      "difficulty": "hard",
+      "query": "国际配送不同重量段的收费标准是怎样的",
+      "expected_topics": ["国际运费", "重量计费"],
+      "notes": "International shipping weight-based pricing"
+    },
+    {
+      "id": "num_005",
+      "category": "numerical",
+      "difficulty": "medium",
+      "query": "会员积分兑换的比例是多少，最低多少积分可以兑换",
+      "expected_topics": ["积分兑换", "兑换比例", "最低门槛"],
+      "notes": "Points redemption rate and minimum threshold"
+    }
+  ]
+}

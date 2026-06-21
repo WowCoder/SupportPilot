@@ -4,12 +4,12 @@ Ticket Service for SupportPilot
 Handles ticket lifecycle management, round counting, and human handoff.
 """
 import logging
-from datetime import datetime
 from typing import Optional, Tuple
 
 from ..extensions import db
 from ..models.support_ticket import SupportTicket
 from ..models.chat_memory import ChatMemory
+from ..models.conversation import Conversation
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +121,12 @@ class TicketService:
         latest_memory = ChatMemory.query.filter_by(session_id=session_id).order_by(ChatMemory.created_at.desc()).first()
         if latest_memory:
             latest_memory.update_ticket_status('pending_human')
+
+        # Close the conversation to stop AI from responding
+        conversation = Conversation.query.get(session_id)
+        if conversation and conversation.status != 'closed':
+            conversation.status = 'closed'
+            logger.info(f'Conversation {session_id} closed due to human handoff')
 
         db.session.commit()
         logger.info(f'Ticket {ticket.id} marked as pending human handoff')

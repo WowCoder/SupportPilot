@@ -3,23 +3,23 @@ Chat Memory API Routes for SupportPilot
 
 Provides REST API endpoints for chat memory management and FAQ operations.
 """
-from flask import Blueprint, jsonify, request, current_app
-from flask_login import current_user, login_required
+from flask import Blueprint, jsonify, request
+from flask import g
+from ..utils.auth import jwt_required
 import logging
 
-from ..extensions import db
-from ..models import Conversation, ChatMemory, FAQEntry
+
+from ..models import Conversation, FAQEntry
 from ..services.chat_memory_service import chat_memory_service
 from ..services.query_rewriter import query_rewriter
 from ..services.faq_generator import faq_generator
-from ..utils import sanitize_input
 
 logger = logging.getLogger(__name__)
 chat_memory_bp = Blueprint('chat_memory', __name__, url_prefix='/api')
 
 
 @chat_memory_bp.route('/chat-memory/<int:session_id>/window', methods=['GET'])
-@login_required
+@jwt_required
 def get_window(session_id):
     """
     Get window of recent chat records for a session.
@@ -35,7 +35,7 @@ def get_window(session_id):
     if not conversation:
         return jsonify({'error': 'Conversation not found'}), 404
 
-    if conversation.user_id != current_user.id and current_user.role != 'tech_support':
+    if conversation.user_id != g.current_user.id and g.current_user.role != 'tech_support':
         return jsonify({'error': 'Permission denied'}), 403
 
     # Get limit from query params
@@ -60,7 +60,7 @@ def get_window(session_id):
 
 
 @chat_memory_bp.route('/chat-memory/<int:session_id>/summary', methods=['GET'])
-@login_required
+@jwt_required
 def get_summary(session_id):
     """
     Get compressed summaries for a session.
@@ -77,7 +77,7 @@ def get_summary(session_id):
     if not conversation:
         return jsonify({'error': 'Conversation not found'}), 404
 
-    if conversation.user_id != current_user.id and current_user.role != 'tech_support':
+    if conversation.user_id != g.current_user.id and g.current_user.role != 'tech_support':
         return jsonify({'error': 'Permission denied'}), 403
 
     # Parse date filters
@@ -116,7 +116,7 @@ def get_summary(session_id):
 
 
 @chat_memory_bp.route('/chat-memory/<int:session_id>/context', methods=['GET'])
-@login_required
+@jwt_required
 def get_context(session_id):
     """
     Get full context for a session (window + summaries).
@@ -129,7 +129,7 @@ def get_context(session_id):
     if not conversation:
         return jsonify({'error': 'Conversation not found'}), 404
 
-    if conversation.user_id != current_user.id and current_user.role != 'tech_support':
+    if conversation.user_id != g.current_user.id and g.current_user.role != 'tech_support':
         return jsonify({'error': 'Permission denied'}), 403
 
     # Get full context
@@ -152,7 +152,7 @@ def get_context(session_id):
 
 
 @chat_memory_bp.route('/faq/generate', methods=['POST'])
-@login_required
+@jwt_required
 def generate_faq():
     """
     Generate FAQ entries from a closed conversation.
@@ -176,7 +176,7 @@ def generate_faq():
     if not conversation:
         return jsonify({'error': 'Conversation not found'}), 404
 
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'error': 'Only tech support can generate FAQ'}), 403
 
     # Check conversation is closed
@@ -193,7 +193,7 @@ def generate_faq():
 
 
 @chat_memory_bp.route('/faq/search', methods=['POST'])
-@login_required
+@jwt_required
 def search_faq():
     """
     Search FAQ entries using vector retrieval.
@@ -253,7 +253,7 @@ def search_faq():
 
 
 @chat_memory_bp.route('/faq/list', methods=['GET'])
-@login_required
+@jwt_required
 def list_faq():
     """
     List all FAQ entries (admin/tech_support only).
@@ -265,7 +265,7 @@ def list_faq():
     Returns:
         JSON list of FAQ entries
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'error': 'Permission denied'}), 403
 
     page = request.args.get('page', type=int, default=1)
@@ -294,7 +294,7 @@ def list_faq():
 
 
 @chat_memory_bp.route('/faq/<int:faq_id>', methods=['DELETE'])
-@login_required
+@jwt_required
 def delete_faq(faq_id):
     """
     Delete a FAQ entry (admin/tech_support only).
@@ -302,7 +302,7 @@ def delete_faq(faq_id):
     Returns:
         JSON with deletion result
     """
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'error': 'Permission denied'}), 403
 
     faq = FAQEntry.query.get(faq_id)

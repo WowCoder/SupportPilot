@@ -1,0 +1,450 @@
+{
+  "meta": {
+    "timestamp": "2026-06-17T18:31:07.967556+00:00",
+    "total_cases": 6,
+    "successful": 6,
+    "failed": 0,
+    "route_distribution": {
+      "simple": 5,
+      "agentic": 1
+    }
+  },
+  "overall": {
+    "count": 6,
+    "faithfulness": {
+      "mean": null,
+      "min": null,
+      "max": null,
+      "std": null,
+      "samples": 0
+    },
+    "context_precision": {
+      "mean": null,
+      "min": null,
+      "max": null,
+      "std": null,
+      "samples": 0
+    },
+    "context_recall": {
+      "mean": null,
+      "min": null,
+      "max": null,
+      "std": null,
+      "samples": 0
+    },
+    "answer_relevancy": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "std": null,
+      "samples": 1
+    }
+  },
+  "by_category": {
+    "comparison": {
+      "count": 2,
+      "faithfulness": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_precision": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_recall": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "answer_relevancy": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "std": null,
+        "samples": 1
+      }
+    },
+    "definition": {
+      "count": 1,
+      "faithfulness": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_precision": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_recall": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "answer_relevancy": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      }
+    },
+    "explanation": {
+      "count": 1,
+      "faithfulness": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_precision": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_recall": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "answer_relevancy": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      }
+    },
+    "factual": {
+      "count": 1,
+      "faithfulness": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_precision": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_recall": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "answer_relevancy": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      }
+    },
+    "how-to": {
+      "count": 1,
+      "faithfulness": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_precision": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_recall": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "answer_relevancy": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      }
+    }
+  },
+  "by_difficulty": {
+    "easy": {
+      "count": 3,
+      "faithfulness": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_precision": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_recall": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "answer_relevancy": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      }
+    },
+    "hard": {
+      "count": 1,
+      "faithfulness": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_precision": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_recall": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "answer_relevancy": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      }
+    },
+    "medium": {
+      "count": 2,
+      "faithfulness": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_precision": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "context_recall": {
+        "mean": null,
+        "min": null,
+        "max": null,
+        "std": null,
+        "samples": 0
+      },
+      "answer_relevancy": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "std": null,
+        "samples": 1
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "smoke_001",
+      "category": "definition",
+      "difficulty": "easy",
+      "query": "英特尔 XeSS 技术是什么",
+      "expected_topics": [
+        "XeSS",
+        "英特尔"
+      ],
+      "contexts": [],
+      "answer": "英特尔 XeSS（Xe Super Sampling）是英特尔推出的一种基于 AI 的超级采样技术，用于提升游戏画质和性能。它利用深度学习神经网络，将较低分辨率渲染的画面通过智能缩放和抗锯齿处理，重建为接近原生高分辨率的画质，从而在保持较高图像质量的同时提高帧率。XeSS 支持多种硬件，包括英特尔 Arc 系列显卡，并兼容 DirectX 12 和 Vulkan 等 API。",
+      "route_type": "simple",
+      "context_count": 0,
+      "legacy_judge": {
+        "judge_score": null,
+        "judge_reason": "无检索结果，无法评估"
+      },
+      "duration_ms": 5764.1,
+      "error": null,
+      "faithfulness": null,
+      "context_precision": null,
+      "context_recall": null,
+      "answer_relevancy": null
+    },
+    {
+      "id": "smoke_002",
+      "category": "comparison",
+      "difficulty": "medium",
+      "query": "对比 RTX 4070 和 RTX 4060 的性能差异",
+      "expected_topics": [
+        "RTX",
+        "显卡"
+      ],
+      "contexts": [
+        "# 英伟达 RTX 4070 显卡公版首发价4799元，5888 CUDA 核心，12GB GDDR6X\n\nIT之家 8 月 17 日消息，英伟达 RTX 4070 显卡公版型号在今年 4 月 13 日首发，售价 4799 元。现在，这款显卡已在京东现货开售。IT之家整理 RTX 4070 参数性能信息如下：RTX 4070 显卡拥有 5888 CUDA 核心，采用 12GB GDDR6X 显存，位宽为 192bit。英伟达表示，在 DLSS 3 加持下，GeForce RTX 4070 平均性能比 RTX 2070 SUPER 快 2.6 倍，比 GeForce RTX 3080 快 1.4 倍。同时，GeForce RTX 4070 在不支持光线追踪和 DLSS 等先进功能的传统光栅化游戏中也表现出色。在这些光栅化的游戏中，GeForce RTX 4070 与 GeForce RTX 3080 不相上下，但实际游戏功耗只有后者的一半不到，并拥有额外的 2GB 显存。此外，RTX 4070 的存储体系得到增强，拥有 36MB L2 缓存和 12GB 超高速 GDDR6X 显存。广告声明：文内含有的对外跳转链接（包括不限于超链接、二维码、口令等形式），用于传递更多信息，节省甄选时间，结果仅供参考，IT之家所有文章均包含本声明。\n",
+        "# 同德推出 RTX 4070 Ti GamingPro 限定版白色显卡，超频至2670MHz\n\nIT之家 8 月 16 日消息，同德股份有限公司（Palit Microsystems Ltd.）成立于 1988 年，是全球最大的显卡专业制造厂商之一，跨越两大阵营，曾为七彩虹、双敏、昂达、盈通、铭瑄代工。该公司现推出了一款全新的 GeForce RTX 4070 Ti GamingPro 限定版。该卡采用纯白设计（ PCB 依然是黑色）。IT之家注意到，同德去年还推出了一款非常相似的 RTX 4080 定制显卡。该公司没有说明为什么这款特殊的显卡被称为限量版，但有消息称这是为了庆祝该品牌在 PC 市场上 35 年的历史而设计的。这款显卡尺寸比较大，采用三风扇 2.5 槽设计，长 328mm，采用 12VHWPR 或者两条与适配器耦合的标准 8pin 供电线。它相比公版显卡超到了 2670 MHz，但超频幅度仅为 2.3%。该卡的 TDP 为 285W，集成了 7680 个 CUDA 核心，配备 12GB GDDR6X 192bit 显存。广告声明：文内含有的对外跳转链接（包括不限于超链接、二维码、口令等形式），用于传递更多信息，节省甄选时间，结果仅供参考，IT之家所有文章均包含本声明。\n",
+        "# 机械革命极光S迷你主机：i9-12900HX+RTX 4060，首发价5999元\n\nIT之家 8 月 17 日消息，机械革命在今年 5 月底推出了极光 S 迷你主机，采用了笔记本上的 i9-12900HX 处理器和 RTX 4060 独显，首发价 5999 元，日常价 6299 元。在京东 818 电脑节期间，这款迷你主机回归到了 5999 元首发价。IT之家整理机械革命极光 S 迷你主机介绍如下：机械革命新款极光 S 大小为 4.5L，搭载了英特尔酷睿 i9-12900HX 处理器（16 核 24 线程睿频 5GHz），以及 140W 满功耗 RTX 4060 显卡。内部配有六铜管、双风扇散热，搭载 16GB 双通道 DDR5 4800 内存 + 1TB PCIe 4.0 SSD，可扩展存储。接口方面，机械革命新款极光 S 正面有两个 USB-A 3.2、一个 USB-A 2.0、音频口，背面有一个雷电 4、两个 USB-A 3.2、两个 USB-A 2.0、一个 HDMI、一个 RJ45 网口。广告声明：文内含有的对外跳转链接（包括不限于超链接、二维码、口令等形式），用于传递更多信息，节省甄选时间，结果仅供参考，IT之家所有文章均包含本声明。\n"
+      ],
+      "answer": "根据提供的上下文，关于 **RTX 4070** 和 **RTX 4060** 的性能参数信息不完整，无法进行详细对比。具体来说：\n\n- **RTX 4070**（Source 1）拥有 5888 CUDA 核心、12GB GDDR6X 显存、192bit 位宽，首发价 4799 元。在 DLSS 3 加持下，平均性能比 RTX 2070 SUPER 快 2.6 倍，比 RTX 3080 快 1.4 倍；传统光栅化游戏中与 RTX 3080 不相上下，但功耗更低。\n- **RTX 4060** 仅在 Source 3 中被提及为“140W 满功耗”，未提供 CUDA 核心数、显存规格、频率等具体参数。\n\n由于缺少 RTX 4060 的关键性能数据（如 CUDA 核心、显存容量、频率等），无法直接计算或对比两款显卡的性能差异。建议补充 RTX 4060 的详细规格后再进行对比。",
+      "route_type": "agentic",
+      "context_count": 3,
+      "legacy_judge": {
+        "judge_score": {
+          "relevance": 1,
+          "completeness": 1,
+          "noise": 2
+        },
+        "judge_reason": "相关性：文档1和3分别提及RTX 4070和RTX 4060，但无对比内容，且文档2完全不相关。完整性：缺乏两者性能差异所需的直接比较数据。噪声：文档2和3属于无关或弱相关内容，增加了检索干扰。"
+      },
+      "duration_ms": 101993.3,
+      "error": null,
+      "faithfulness": null,
+      "context_precision": null,
+      "context_recall": null,
+      "answer_relevancy": 0.0
+    },
+    {
+      "id": "smoke_003",
+      "category": "factual",
+      "difficulty": "easy",
+      "query": "京东2023年第二季度营收是多少",
+      "expected_topics": [
+        "京东",
+        "财报"
+      ],
+      "contexts": [],
+      "answer": "根据提供的信息，京东2023年第二季度营收为 **2879亿元**。",
+      "route_type": "simple",
+      "context_count": 0,
+      "legacy_judge": {
+        "judge_score": null,
+        "judge_reason": "无检索结果，无法评估"
+      },
+      "duration_ms": 3459.0,
+      "error": null,
+      "faithfulness": null,
+      "context_precision": null,
+      "context_recall": null,
+      "answer_relevancy": null
+    },
+    {
+      "id": "smoke_004",
+      "category": "explanation",
+      "difficulty": "medium",
+      "query": "为什么 Steam 调整了最低价格门槛",
+      "expected_topics": [
+        "Steam",
+        "定价"
+      ],
+      "contexts": [],
+      "answer": "抱歉，我目前的知识库中没有关于 Steam 调整最低价格门槛的具体原因或详细信息。如果你能提供相关背景资料或具体调整内容，我可以帮你分析或解读。否则，建议直接查阅 Steam 官方公告或联系其客服获取最准确的说明。",
+      "route_type": "simple",
+      "context_count": 0,
+      "legacy_judge": {
+        "judge_score": null,
+        "judge_reason": "无检索结果，无法评估"
+      },
+      "duration_ms": 3663.6,
+      "error": null,
+      "faithfulness": null,
+      "context_precision": null,
+      "context_recall": null,
+      "answer_relevancy": null
+    },
+    {
+      "id": "smoke_005",
+      "category": "how-to",
+      "difficulty": "easy",
+      "query": "如何防控儿童青少年近视",
+      "expected_topics": [
+        "近视",
+        "防控"
+      ],
+      "contexts": [],
+      "answer": "防控儿童青少年近视需要从日常习惯、户外活动、用眼环境等多方面入手。以下是一些科学有效的措施：\n\n1. **增加户外活动**：每天保证2小时以上的白天户外活动，自然光有助于延缓眼轴增长。\n2. **保持正确读写姿势**：遵循“一拳一尺一寸”原则（胸口离桌沿一拳，眼睛离书本一尺，握笔手指离笔尖一寸）。\n3. **控制用眼时间**：遵循“20-20-20”法则——每近距离用眼20分钟，看20英尺（约6米）以外的物体20秒。\n4. **优化用眼环境**：保证光线充足且柔和，避免在过暗或过亮、反光、晃动的环境下看书或使用电子产品。\n5. **减少电子产品使用**：非学习目的电子产品单次不宜超过15分钟，每天累计不超过1小时。\n6. **定期检查视力**：每6-12个月到正规医疗机构进行视力及屈光检查，建立视觉健康档案。\n7. **均衡营养与充足睡眠**：多吃富含维生素A、C、E和叶黄素的食物（如胡萝卜、菠菜、蓝莓等），保证小学生每天10小时、初中生9小时、高中生8小时睡眠。\n\n如果已经近视，应及时配戴合适的眼镜或遵医嘱使用角膜塑形镜、低浓度阿托品等方法控制度数发展。更多个性化建议请咨询眼科医生。",
+      "route_type": "simple",
+      "context_count": 0,
+      "legacy_judge": {
+        "judge_score": null,
+        "judge_reason": "无检索结果，无法评估"
+      },
+      "duration_ms": 6663.7,
+      "error": null,
+      "faithfulness": null,
+      "context_precision": null,
+      "context_recall": null,
+      "answer_relevancy": null
+    },
+    {
+      "id": "smoke_006",
+      "category": "comparison",
+      "difficulty": "hard",
+      "query": "英伟达和英特尔在显卡技术上有哪些竞争",
+      "expected_topics": [
+        "英伟达",
+        "英特尔",
+        "显卡"
+      ],
+      "contexts": [],
+      "answer": "抱歉，目前的知识库中没有关于英伟达和英特尔在显卡技术上的竞争信息。如果您有其他问题，我会尽力为您提供帮助。",
+      "route_type": "simple",
+      "context_count": 0,
+      "legacy_judge": {
+        "judge_score": null,
+        "judge_reason": "无检索结果，无法评估"
+      },
+      "duration_ms": 4939.2,
+      "error": null,
+      "faithfulness": null,
+      "context_precision": null,
+      "context_recall": null,
+      "answer_relevancy": null
+    }
+  ]
+}

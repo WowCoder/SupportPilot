@@ -4,7 +4,8 @@ import logging
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
-from flask_login import current_user, login_required
+from flask import g
+from ..utils.auth import jwt_required
 from sqlalchemy import func
 
 from ..extensions import db
@@ -20,7 +21,7 @@ def _q(model):
 
 
 @rag_dash_bp.route('/feedback', methods=['POST'])
-@login_required
+@jwt_required
 def submit_feedback():
     """Submit user feedback (thumbs up/down) on an AI response."""
     data = request.get_json(silent=True) or {}
@@ -36,7 +37,7 @@ def submit_feedback():
     latest_log = _q(RagRetrievalLog).order_by(RagRetrievalLog.created_at.desc()).first()
 
     existing = _q(UserFeedback).filter_by(
-        user_id=current_user.id, message_id=message_id
+        user_id=g.current_user.id, message_id=message_id
     ).first()
 
     updated = False
@@ -49,22 +50,22 @@ def submit_feedback():
         feedback = UserFeedback(
             conversation_id=conversation_id,
             message_id=message_id,
-            user_id=current_user.id,
+            user_id=g.current_user.id,
             type=feedback_type,
             retrieval_log_id=latest_log.id if latest_log else None
         )
         db.session.add(feedback)
 
     db.session.commit()
-    logger.info(f'Feedback: user={current_user.id} msg={message_id} type={feedback_type}')
+    logger.info(f'Feedback: user={g.current_user.id} msg={message_id} type={feedback_type}')
     return jsonify({'success': True, 'updated': updated})
 
 
 @rag_dash_bp.route('/rag-logs', methods=['GET'])
-@login_required
+@jwt_required
 def list_logs():
     """List retrieval logs with pagination and filters."""
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
     page = request.args.get('page', 1, type=int)
@@ -155,10 +156,10 @@ def list_logs():
 
 
 @rag_dash_bp.route('/rag-logs/<int:log_id>', methods=['GET'])
-@login_required
+@jwt_required
 def get_log_detail(log_id):
     """Get single log with full results_json and associated feedback."""
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
     log = _q(RagRetrievalLog).get_or_404(log_id)
@@ -205,10 +206,10 @@ def get_log_detail(log_id):
 
 
 @rag_dash_bp.route('/rag-logs/<int:log_id>/judge', methods=['POST'])
-@login_required
+@jwt_required
 def trigger_judge(log_id):
     """Trigger LLM-as-Judge evaluation for a retrieval log."""
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
     log = _q(RagRetrievalLog).get_or_404(log_id)
@@ -223,7 +224,7 @@ def trigger_judge(log_id):
     if not results:
         return jsonify({'success': False, 'message': '无检索结果可评估'}), 400
 
-    from ..services.rag_evaluation import judge_retrieval
+    from evaluation.rag_evaluation import judge_retrieval
     result = judge_retrieval(log.query, results)
 
     if result and result.get('judge_score'):
@@ -244,10 +245,10 @@ def trigger_judge(log_id):
 
 
 @rag_dash_bp.route('/rag-logs/stats', methods=['GET'])
-@login_required
+@jwt_required
 def get_stats():
     """Get dashboard summary stats."""
-    if current_user.role != 'tech_support':
+    if g.current_user.role != 'tech_support':
         return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
     total = _q(RagRetrievalLog).count()

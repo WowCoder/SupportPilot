@@ -2,13 +2,16 @@
 SupportPilot Application Factory
 
 This module creates and configures the Flask application instance.
+Pure API server — all page rendering is handled by the Vue SPA frontend.
 """
 from flask import Flask
 import os
 import logging
 from logging.handlers import RotatingFileHandler
 
-from .extensions import db, login_manager, csrf
+from flask_cors import CORS
+
+from .extensions import db
 
 
 def setup_logging(app: Flask) -> None:
@@ -47,11 +50,9 @@ def create_app(config_class=None) -> Flask:
         config_class: Configuration class or config name string
 
     Returns:
-        Configured Flask application instance
+        Configured Flask application instance (API-only)
     """
-    app = Flask(__name__,
-                template_folder='../templates',
-                static_folder='../static')
+    app = Flask(__name__)
 
     # Load configuration
     if config_class is None:
@@ -65,51 +66,49 @@ def create_app(config_class=None) -> Flask:
 
     app.config.from_object(config_object)
 
+    # Setup CORS for SPA frontend
+    if app.config.get('DEBUG'):
+        # Development: allow Vue dev server
+        CORS(app, resources={
+            r"/api/*": {
+                "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+                "allow_headers": ["Authorization", "Content-Type"],
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            }
+        })
+    else:
+        # Production: same-origin (frontend served by same Nginx)
+        CORS(app)
+
     # Setup logging
     setup_logging(app)
 
     # Create uploads directory if it doesn't exist
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-    # Initialize extensions
+    # Initialize database
     db.init_app(app)
-    login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
-    csrf.init_app(app)
 
-    # Add global template functions
-    @app.context_processor
-    def inject_globals():
-        from datetime import datetime
-        return {'now': datetime}
-
-    # Register blueprints
-    from .auth.routes import auth_bp
-    from .main.routes import main_bp
-    from .conversation.routes import conversation_bp
-    from .document.routes import document_bp
+    # Register API blueprints (JWT-based, no CSRF needed)
     from .api.routes import api_bp
     from .api.chat import chat_memory_bp
     from .api.tickets import ticket_bp
     from .api.faq import faq_bp
     from .api.rag_dashboard import rag_dash_bp
+    from .api.auth import auth_bp as auth_api_bp
+    from .api.v1.chat import chat_v1_bp
+    from .api.v1.faq import faq_v1_bp
+    from .api.v1.documents import doc_v1_bp
 
-    app.register_blueprint(main_bp)
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(conversation_bp)
-    app.register_blueprint(document_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(chat_memory_bp)
     app.register_blueprint(ticket_bp)
     app.register_blueprint(faq_bp)
     app.register_blueprint(rag_dash_bp)
-
-    # Exempt API blueprint from CSRF protection
-    csrf.exempt(api_bp)
-    csrf.exempt(chat_memory_bp)
-    csrf.exempt(ticket_bp)
-    csrf.exempt(faq_bp)
-    csrf.exempt(rag_dash_bp)
+    app.register_blueprint(auth_api_bp)
+    app.register_blueprint(chat_v1_bp)
+    app.register_blueprint(faq_v1_bp)
+    app.register_blueprint(doc_v1_bp)
 
     # Create database tables
     with app.app_context():
@@ -118,19 +117,21 @@ def create_app(config_class=None) -> Flask:
         # Create default tech support account (development only)
         if app.config.get('DEBUG'):
             from .models import User
-            import secrets
 
-            if not User.query.filter_by(username='tech_support').first():
+            tech_user = User.query.filter_by(username='tech_support').first()
+            if tech_user:
+                tech_user.set_password('tech123')
+                db.session.commit()
+                app.logger.info('tech_support password reset to default')
+            else:
                 tech_support = User(
                     username='tech_support',
                     email='tech@example.com',
                     role='tech_support'
                 )
-                default_password = secrets.token_urlsafe(16)
-                tech_support.set_password(default_password)
+                tech_support.set_password('tech123')
                 db.session.add(tech_support)
                 db.session.commit()
-                app.logger.info(f'Default tech_support account created with password: {default_password}')
-                app.logger.warning('Please change the password immediately after first login!')
+                app.logger.info('Default tech_support account created with password: tech123')
 
     return app

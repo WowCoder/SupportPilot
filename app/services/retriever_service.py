@@ -19,8 +19,8 @@ class RetrieverService:
     @property
     def rag_service(self):
         if self._rag_service is None:
-            from rag.online.service import rag_online_service
-            self._rag_service = rag_online_service
+            from rag.online.service import rag_service
+            self._rag_service = rag_service
         return self._rag_service
 
     def search(self, query, k=3, use_hybrid=False, use_reranking=True):
@@ -50,8 +50,9 @@ class RetrieverService:
         Returns:
             List of parent document dicts
         """
-        return self.rag_service.retrieve_with_parent(query, k=k,
-                                                      use_reranking=use_reranking)
+        from rag.offline.pipeline import rag_utils
+        return rag_utils.retrieve_with_parent(query, k=k,
+                                              use_reranking=use_reranking)
 
     def process_document(self, file_path, strategy='semantic', **kwargs):
         """Process and index a document.

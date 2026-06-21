@@ -2,7 +2,6 @@
 Conversation model for SupportPilot
 """
 from datetime import datetime
-from typing import Optional
 
 from ..extensions import db
 

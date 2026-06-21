@@ -1,22 +1,14 @@
 """
 User model for SupportPilot
 """
-from datetime import datetime
-from typing import Tuple, List
-from flask_login import UserMixin
+from typing import Tuple
 import hashlib
 import os
 
-from ..extensions import db, login_manager
+from ..extensions import db
 
 
-@login_manager.user_loader
-def load_user(user_id: str) -> 'User':
-    """Load user by ID for Flask-Login"""
-    return User.query.get(int(user_id))
-
-
-class User(UserMixin, db.Model):
+class User(db.Model):
     """User model for authentication and authorization"""
 
     __tablename__ = 'user'

@@ -7,7 +7,7 @@ Supports multi-path retrieval fusion using RRF (Reciprocal Rank Fusion):
 - Configurable weights and fusion parameters
 """
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from rag.online.retrievers.base import BaseTool, ToolResult
 from rag.utils.config import get_config
@@ -27,7 +27,10 @@ class EnsembleTool(BaseTool):
     """
 
     name = "ensemble_retrieval"
-    description = "Combine results from multiple retrieval methods (vector, BM25, etc.) using Reciprocal Rank Fusion (RRF) for robust ranking."
+    description = (
+        "Combine results from multiple retrieval methods (vector, BM25, etc.) "
+        "using Reciprocal Rank Fusion (RRF) for robust ranking."
+    )
 
     # RRF constant (typically 60, range 40-100)
     RRF_K = 60

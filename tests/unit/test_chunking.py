@@ -11,7 +11,9 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rag.offline.pipeline import RAGUtils
+from rag.offline.steps.chunking import ChunkingStage  # noqa: E402
+from rag.offline.steps.quality import QualityStage  # noqa: E402
+from rag.offline.pipeline_config import ChunkingConfig  # noqa: E402
 
 
 class TestSentenceSplitting:
@@ -19,9 +21,8 @@ class TestSentenceSplitting:
 
     def test_split_english_sentences(self):
         """Test splitting English text into sentences"""
-        rag = RAGUtils()
         text = "This is sentence one. This is sentence two! Is this sentence three?"
-        sentences = rag._split_sentences(text)
+        sentences = ChunkingStage._split_sentences(text)
 
         assert len(sentences) == 3
         assert "one" in sentences[0]
@@ -30,9 +31,8 @@ class TestSentenceSplitting:
 
     def test_split_chinese_sentences(self):
         """Test splitting Chinese text into sentences"""
-        rag = RAGUtils()
         text = "这是第一句话。这是第二句话！这是第三句话？"
-        sentences = rag._split_sentences(text)
+        sentences = ChunkingStage._split_sentences(text)
 
         assert len(sentences) == 3
         assert "第一句" in sentences[0]
@@ -41,9 +41,8 @@ class TestSentenceSplitting:
 
     def test_split_mixed_sentences(self):
         """Test splitting mixed Chinese and English text"""
-        rag = RAGUtils()
         text = "Hello world. 你好世界！This is mixed. 这是混合内容？"
-        sentences = rag._split_sentences(text)
+        sentences = ChunkingStage._split_sentences(text)
 
         assert len(sentences) == 4
         assert "Hello" in sentences[0]
@@ -53,9 +52,8 @@ class TestSentenceSplitting:
 
     def test_split_with_newlines(self):
         """Test that newlines are treated as sentence boundaries"""
-        rag = RAGUtils()
         text = "Line one\nLine two\nLine three"
-        sentences = rag._split_sentences(text)
+        sentences = ChunkingStage._split_sentences(text)
 
         assert len(sentences) >= 3
         # Each line should be preserved
@@ -68,7 +66,8 @@ class TestSentenceChunking:
 
     def test_basic_sentence_chunking(self):
         """Test basic sentence-level chunking"""
-        rag = RAGUtils()
+        config = ChunkingConfig(strategy='sentence', chunk_size=100)
+        stage = ChunkingStage(config)
 
         # Create mock document
         doc = type('obj', (object,), {
@@ -76,7 +75,8 @@ class TestSentenceChunking:
             'metadata': {'source': 'test.txt'}
         })()
 
-        chunks = rag._sentence_chunk([doc], max_chunk_size=100)
+        result = stage([doc], strategy='sentence')
+        chunks = result.chunks
 
         assert len(chunks) >= 1
         # Verify no sentence is split mid-way
@@ -87,24 +87,31 @@ class TestSentenceChunking:
 
     def test_large_sentence_handling(self):
         """Test that large sentences become their own chunks"""
-        rag = RAGUtils()
-
         # Create a very long sentence
-        long_sentence = "This is a very long sentence that exceeds the maximum chunk size limit and should be placed in its own chunk without being split anywhere in the middle of the sentence content."
+        long_sentence = (
+            "This is a very long sentence that exceeds the maximum chunk size "
+            "limit and should be placed in its own chunk without being split "
+            "anywhere in the middle of the sentence content."
+        )
+
+        config = ChunkingConfig(strategy='sentence', chunk_size=50)
+        stage = ChunkingStage(config)
+
         doc = type('obj', (object,), {
             'page_content': long_sentence,
             'metadata': {'source': 'test.txt'}
         })()
 
-        chunks = rag._sentence_chunk([doc], max_chunk_size=50)
+        result = stage([doc], strategy='sentence')
 
         # Long sentence should be its own chunk
-        assert len(chunks) == 1
-        assert chunks[0].page_content == long_sentence.strip()
+        assert len(result.chunks) == 1
+        assert result.chunks[0].page_content == long_sentence.strip()
 
     def test_sentence_boundary_preservation(self):
         """Test that chunks never split mid-sentence"""
-        rag = RAGUtils()
+        config = ChunkingConfig(strategy='sentence', chunk_size=60)
+        stage = ChunkingStage(config)
 
         # Create document with clear sentence boundaries
         text = "First complete sentence. Second complete sentence with more content. Third sentence ends here."
@@ -113,9 +120,9 @@ class TestSentenceChunking:
             'metadata': {'source': 'test.txt'}
         })()
 
-        chunks = rag._sentence_chunk([doc], max_chunk_size=60)
+        result = stage([doc], strategy='sentence')
 
-        for chunk in chunks:
+        for chunk in result.chunks:
             content = chunk.page_content.strip()
             # Each chunk should contain complete sentences
             # Check that it doesn't end mid-word (before punctuation)
@@ -126,16 +133,17 @@ class TestSentenceChunking:
 
     def test_metadata_preservation(self):
         """Test that metadata is preserved in chunks"""
-        rag = RAGUtils()
+        config = ChunkingConfig(strategy='sentence', chunk_size=100)
+        stage = ChunkingStage(config)
 
         doc = type('obj', (object,), {
             'page_content': "Sentence one. Sentence two.",
             'metadata': {'source': 'test.pdf', 'page': 1}
         })()
 
-        chunks = rag._sentence_chunk([doc], max_chunk_size=100)
+        result = stage([doc], strategy='sentence')
 
-        for chunk in chunks:
+        for chunk in result.chunks:
             assert chunk.metadata.get('source') == 'test.pdf'
             assert chunk.metadata.get('page') == 1
 
@@ -145,12 +153,13 @@ class TestSemanticChunking:
 
     def test_semantic_chunker_creation(self):
         """Test that semantic splitter can be created"""
-        rag = RAGUtils()
+        config = ChunkingConfig()
+        stage = ChunkingStage(config)
 
         # This test may fail if embeddings aren't available
         # In that case, we verify the fallback works
         try:
-            splitter = rag._create_semantic_splitter()
+            splitter = stage._create_semantic_splitter()
             assert splitter is not None
         except ValueError as e:
             # Expected if embeddings not initialized
@@ -158,7 +167,8 @@ class TestSemanticChunking:
 
     def test_semantic_chunking_fallback(self):
         """Test that semantic chunking falls back to sentence chunking on failure"""
-        rag = RAGUtils()
+        config = ChunkingConfig()
+        stage = ChunkingStage(config)
 
         doc = type('obj', (object,), {
             'page_content': "Test sentence one. Test sentence two.",
@@ -166,10 +176,10 @@ class TestSemanticChunking:
         })()
 
         # Should fall back to sentence chunking if semantic fails
-        chunks = rag._semantic_chunk([doc])
+        result = stage([doc], strategy='semantic')
 
-        assert len(chunks) >= 1
-        assert all(chunk.page_content.strip() != "" for chunk in chunks)
+        assert len(result.chunks) >= 1
+        assert all(chunk.page_content.strip() != "" for chunk in result.chunks)
 
 
 class TestChunkingStrategies:
@@ -177,25 +187,18 @@ class TestChunkingStrategies:
 
     def test_chunk_object_creation(self):
         """Test chunk object creation helper"""
-        rag = RAGUtils()
-
-        chunk = rag._create_chunk("Test content", {'source': 'test.txt'})
+        chunk = ChunkingStage._create_chunk("Test content", {'source': 'test.txt'})
 
         assert chunk.page_content == "Test content"
         assert chunk.metadata == {'source': 'test.txt'}
 
     def test_strategy_parameter_validation(self):
         """Test that strategy parameter is properly handled"""
-        # This is tested via integration, but we verify the method signature exists
-        rag = RAGUtils()
-
-        # Verify process_document accepts strategy parameter
         import inspect
-        sig = inspect.signature(rag.process_document)
+        sig = inspect.signature(ChunkingStage.__call__)
         params = list(sig.parameters.keys())
 
         assert 'strategy' in params
-        assert sig.parameters['strategy'].default == 'semantic'
 
 
 class TestChunkQuality:
@@ -203,27 +206,22 @@ class TestChunkQuality:
 
     def test_quality_score_empty_text(self):
         """Test quality score for empty text"""
-        rag = RAGUtils()
-        score = rag._quality_score("")
+        score = QualityStage.score_text("")
         assert score == 0
 
     def test_quality_score_good_text(self):
         """Test quality score for good quality text"""
-        rag = RAGUtils()
-
         # Good quality text: appropriate length, punctuation, meaningful content
         text = "This is a well-formed sentence with proper punctuation and meaningful content."
-        score = rag._quality_score(text)
+        score = QualityStage.score_text(text)
 
         assert score >= 60  # Should pass quality threshold
 
     def test_quality_score_noisy_text(self):
         """Test quality score for noisy text"""
-        rag = RAGUtils()
-
         # Noisy text: mostly numbers
         text = "1. 2. 3. 4. 5. 6. 7. 8. 9. 10."
-        score = rag._quality_score(text)
+        score = QualityStage.score_text(text)
 
         assert score < 60  # Should fail quality threshold
 

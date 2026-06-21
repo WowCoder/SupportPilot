@@ -7,7 +7,6 @@ import os
 import yaml
 import logging
 from typing import Any, Dict, Optional
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
