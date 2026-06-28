@@ -104,6 +104,9 @@ def list_logs():
             'top1_similarity': log.top1_similarity,
             'duration_ms': log.duration_ms,
             'route_type': log.route_type,
+            'sub_query_count': log.sub_query_count or 0,
+            'retry_count': log.retry_count or 0,
+            'faithfulness_score': log.faithfulness_score,
             'judge_score': judge_score,
             'judge_reason': log.judge_reason,
             'created_at': log.created_at.isoformat() if log.created_at else None
@@ -123,7 +126,12 @@ def list_logs():
         for log in judged:
             try:
                 js = json.loads(log.judge_score)
-                scores.append((js.get('relevance', 0) + js.get('completeness', 0) + js.get('noise', 0)) / 3)
+                avg = (
+                    js.get('relevance', 0)
+                    + js.get('completeness', 0)
+                    + js.get('noise', 0)
+                ) / 3
+                scores.append(avg)
             except (json.JSONDecodeError, TypeError):
                 pass
         if scores:
@@ -187,6 +195,14 @@ def get_log_detail(log_id):
             'created_at': fb.created_at.isoformat() if fb.created_at else None
         })
 
+    # Parse trace data
+    trace = None
+    if log.trace_json:
+        try:
+            trace = json.loads(log.trace_json)
+        except json.JSONDecodeError:
+            pass
+
     return jsonify({
         'success': True,
         'log': {
@@ -196,7 +212,11 @@ def get_log_detail(log_id):
             'top1_similarity': log.top1_similarity,
             'duration_ms': log.duration_ms,
             'route_type': log.route_type,
+            'sub_query_count': log.sub_query_count or 0,
+            'retry_count': log.retry_count or 0,
+            'faithfulness_score': log.faithfulness_score,
             'results': results,
+            'trace': trace,
             'judge_score': judge_score,
             'judge_reason': log.judge_reason,
             'feedbacks': feedbacks,
@@ -263,7 +283,12 @@ def get_stats():
         for log in judged:
             try:
                 js = json.loads(log.judge_score)
-                scores.append((js.get('relevance', 0) + js.get('completeness', 0) + js.get('noise', 0)) / 3)
+                avg = (
+                    js.get('relevance', 0)
+                    + js.get('completeness', 0)
+                    + js.get('noise', 0)
+                ) / 3
+                scores.append(avg)
             except (json.JSONDecodeError, TypeError):
                 pass
         if scores:

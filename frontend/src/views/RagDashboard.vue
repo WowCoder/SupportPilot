@@ -1,7 +1,8 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { getRagLogs, getRagStats } from '@/api/rag'
+import { getRagLogs, getRagStats, getRagLogDetail } from '@/api/rag'
 import { ElMessage } from 'element-plus'
+import TraceViewer from '@/components/rag/TraceViewer.vue'
 
 const loading = ref(false)
 const logs = ref([])
@@ -22,6 +23,11 @@ const filters = reactive({
 const page = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+
+// Trace drawer
+const traceDrawerVisible = ref(false)
+const traceDetail = ref(null)
+const traceLoading = ref(false)
 
 async function loadData() {
   loading.value = true
@@ -56,6 +62,31 @@ async function loadData() {
   }
 }
 
+async function viewTrace(row) {
+  traceLoading.value = true
+  traceDrawerVisible.value = true
+  try {
+    const res = await getRagLogDetail(row.id)
+    const logData = res.data?.log || res.data?.data || {}
+    traceDetail.value = {
+      id: row.id,
+      query: row.query,
+      trace: logData.trace || null,
+      results: logData.results || [],
+      route_type: row.route_type,
+      duration_ms: row.duration_ms,
+      sub_query_count: row.sub_query_count,
+      retry_count: row.retry_count,
+      faithfulness_score: row.faithfulness_score,
+    }
+  } catch (err) {
+    ElMessage.error('加载 trace 失败')
+    traceDetail.value = { id: row.id, query: row.query, trace: null, results: [] }
+  } finally {
+    traceLoading.value = false
+  }
+}
+
 function onFilterChange() {
   page.value = 1
   loadData()
@@ -66,6 +97,11 @@ function rowClassName({ row }) {
   const judge = typeof row.judge_score === 'number' ? row.judge_score : 5
   if (sim < 0.3 || judge < 3) return 'row-low-quality'
   return ''
+}
+
+function formatFaithfulness(score) {
+  if (score == null) return '-'
+  return (score * 100).toFixed(0) + '%'
 }
 
 onMounted(loadData)
@@ -162,10 +198,54 @@ onMounted(loadData)
       <el-table-column label="路由" width="80">
         <template #default="{ row }">{{ row.route_type || '-' }}</template>
       </el-table-column>
+      <el-table-column label="子查询" width="70">
+        <template #default="{ row }">{{ row.sub_query_count ?? '-' }}</template>
+      </el-table-column>
+      <el-table-column label="重试" width="60">
+        <template #default="{ row }">
+          <span :style="{ color: (row.retry_count || 0) > 0 ? '#e6a23c' : '' }">{{ row.retry_count ?? 0 }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="忠实度" width="80">
+        <template #default="{ row }">{{ formatFaithfulness(row.faithfulness_score) }}</template>
+      </el-table-column>
+      <el-table-column label="Trace" width="70" fixed="right">
+        <template #default="{ row }">
+          <el-button link type="primary" size="small" @click="viewTrace(row)">查看</el-button>
+        </template>
+      </el-table-column>
       <el-table-column label="时间" width="170">
         <template #default="{ row }">{{ row.created_at ? new Date(row.created_at).toLocaleString('zh-CN') : '-' }}</template>
       </el-table-column>
     </el-table>
+
+    <!-- Trace Drawer -->
+    <el-drawer
+      v-model="traceDrawerVisible"
+      title="Pipeline Trace"
+      size="600px"
+      direction="rtl"
+    >
+      <div v-if="traceLoading" style="text-align: center; padding: 40px;">
+        <el-icon class="is-loading" :size="32"><Loading /></el-icon>
+        <p style="color: #999; margin-top: 12px;">加载 trace 数据...</p>
+      </div>
+      <div v-else-if="traceDetail">
+        <div style="margin-bottom: 16px;">
+          <el-tag :type="traceDetail.route_type === 'agentic' ? 'success' : ''" size="small" style="margin-right: 8px;">
+            {{ traceDetail.route_type }}
+          </el-tag>
+          <span style="font-size: 13px; color: #606266;">{{ traceDetail.query }}</span>
+        </div>
+        <div style="margin-bottom: 6px; font-size: 12px; color: #909399;">
+          耗时 {{ traceDetail.duration_ms }}ms
+          <span v-if="traceDetail.sub_query_count"> · {{ traceDetail.sub_query_count }} 子查询</span>
+          <span v-if="traceDetail.retry_count"> · {{ traceDetail.retry_count }} 重试</span>
+          <span v-if="traceDetail.faithfulness_score != null"> · 忠实度 {{ formatFaithfulness(traceDetail.faithfulness_score) }}</span>
+        </div>
+        <TraceViewer :trace="traceDetail.trace" />
+      </div>
+    </el-drawer>
 
     <!-- Pagination -->
     <div style="margin-top: 16px; display: flex; justify-content: flex-end;">

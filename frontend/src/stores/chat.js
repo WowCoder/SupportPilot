@@ -100,7 +100,11 @@ export const useChatStore = defineStore('chat', () => {
       }
       // Add AI response if present
       if (data.data.ai_message) {
-        messages.value.push(data.data.ai_message)
+        const aiMsg = { ...data.data.ai_message }
+        if (data.data.rag_metadata) {
+          aiMsg._rag_metadata = data.data.rag_metadata
+        }
+        messages.value.push(aiMsg)
       } else if (data.data.ai_error) {
         // Show AI unavailable message
         messages.value.push({

@@ -13,8 +13,15 @@ class RagRetrievalLog(db.Model):
     duration_ms = db.Column(db.Float, nullable=True)
     route_type = db.Column(db.String(20), default='simple')
     results_json = db.Column(db.Text, nullable=True)  # JSON string of full retrieval results
-    judge_score = db.Column(db.Text, nullable=True)    # JSON: {"relevance":4,"completeness":3,"noise":2}
-    judge_reason = db.Column(db.Text, nullable=True)    # LLM judge explanation
+    # JSON string of full pipeline trace (node events, decisions)
+    trace_json = db.Column(db.Text, nullable=True)
+    sub_query_count = db.Column(db.Integer, default=0)
+    retry_count = db.Column(db.Integer, default=0)
+    faithfulness_score = db.Column(db.Float, nullable=True)
+    # JSON: {"relevance":4,"completeness":3,"noise":2}
+    judge_score = db.Column(db.Text, nullable=True)
+    # LLM judge explanation
+    judge_reason = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationship

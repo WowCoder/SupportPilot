@@ -166,6 +166,25 @@ def send_message(session_id):
                 if relevant_info else f'RAG retrieval: query="{content[:50]}...", results=0'
             )
 
+            # Build RAG metadata for frontend visibility
+            rag_meta = rag_service.last_metadata or {}
+            rag_metadata = {
+                'route_type': rag_meta.get('route_type', 'simple'),
+                'retrieval_count': len(relevant_info),
+                'sub_query_count': rag_meta.get('sub_query_count', 0),
+                'retry_count': rag_meta.get('retry_count', 0),
+                'faithfulness_score': rag_meta.get('faithfulness_score'),
+                'log_id': relevant_info[0].get('log_id') if relevant_info else None,
+                'top_sources': [
+                    {
+                        'content': r.get('content', '')[:200],
+                        'source': r.get('source', ''),
+                        'score': round(r.get('similarity', r.get('score', 0)), 3),
+                    }
+                    for r in (relevant_info or [])[:3]
+                ],
+            }
+
             ai_response = llm_client.chat(content, relevant_info)
             ai_message = Message(
                 conversation_id=session_id,
@@ -197,6 +216,8 @@ def send_message(session_id):
     }
     if ai_message:
         resp_data['ai_message'] = _message_to_dict(ai_message)
+    if 'rag_metadata' in locals():
+        resp_data['rag_metadata'] = rag_metadata
 
     return api_success(resp_data, code=201)
 

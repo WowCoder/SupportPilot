@@ -133,6 +133,10 @@ class AgentState:
     # Rerank
     reranked_results: List[Dict[str, Any]] = field(default_factory=list)
 
+    # Parallel retrieval (Phase 1 optimization)
+    parallel_sub_results: List[Dict[str, Any]] = field(default_factory=list)
+    parallel_errors: List[str] = field(default_factory=list)
+
     # Metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -190,6 +194,10 @@ class AgentStateDict(TypedDict):
 
     # Rerank
     reranked_results: Sequence[Dict[str, Any]]
+
+    # Parallel retrieval (Phase 1 optimization)
+    parallel_sub_results: Sequence[Dict[str, Any]]
+    parallel_errors: Sequence[str]
 
     # Metadata
     metadata: Dict[str, Any]

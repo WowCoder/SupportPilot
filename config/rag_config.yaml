@@ -85,6 +85,26 @@ chat_memory:
   window_size: 5
   timeout_seconds: 5
 
+# Semantic cache (query embedding → cached answer)
+semantic_cache:
+  enabled: true
+  similarity_threshold: 0.95  # Cosine similarity threshold for cache hit
+  ttl_seconds: 86400          # Cache entry TTL (24 hours)
+  max_entries: 10000          # Max cache entries before eviction
+
+# Diversity reranking (MMR - Maximal Marginal Relevance)
+diversity:
+  enabled: true
+  lambda: 0.7                 # Relevance weight (0-1), higher = more relevance
+  mmr_pool_size: 20           # Candidate pool size for MMR selection
+  mmr_final_k: 10             # Final output count after MMR
+
+# Parallel sub-query execution
+parallel:
+  enabled: true
+  max_workers: 4              # Max concurrent sub-query threads
+  per_sub_query_timeout: 15   # Timeout per sub-query (seconds)
+
 # Logging
 logging:
   level: INFO

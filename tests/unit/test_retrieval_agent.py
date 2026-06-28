@@ -325,16 +325,18 @@ class TestAgentIntegration:
         # The graph should have all required nodes
         graph_nodes = list(agent._graph.nodes.keys())
 
+        # Core nodes (always graph-level)
         assert 'query_understanding' in graph_nodes
         assert 'query_decomposition' in graph_nodes
-        assert 'tool_selection' in graph_nodes
-        assert 'tool_execution' in graph_nodes
-        assert 'rerank' in graph_nodes
-        assert 'relevance_check' in graph_nodes
-        assert 'query_refiner' in graph_nodes
+        assert 'parallel_retrieval' in graph_nodes
         assert 'result_aggregation' in graph_nodes
         assert 'answer_generation' in graph_nodes
         assert 'faithfulness_check' in graph_nodes
+        assert 'query_refiner' in graph_nodes
+
+        # tool_selection, tool_execution, rerank, relevance_check
+        # are now internal to parallel_retrieval (Phase 1 optimization)
+        # but their process() methods remain importable
 
 
 class TestAgentTimeout:
